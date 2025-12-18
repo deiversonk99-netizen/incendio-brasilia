@@ -1,0 +1,5 @@
+{
+  "name": "Sistema de Cotação de Alarme de Incêndio",
+  "description": "Aplicativo profissional para orçamentação de projetos de infraestrutura e dispositivos de alarme de incêndio, com cálculo automático de materiais baseado em kits de composição e exportação de propostas.",
+  "requestFramePermissions": []
+}
