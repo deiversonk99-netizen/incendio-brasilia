@@ -57,7 +57,7 @@ const NavTab = ({ to, label, icon, active }: { to: string, label: string, icon: 
     to={to} 
     className={`flex items-center gap-3 px-6 py-3 rounded-2xl transition-all duration-300 font-black uppercase text-[10px] tracking-widest ${
       active 
-        ? 'bg-red-600 text-white shadow-lg' 
+        ? 'bg-red-600 text-white shadow-lg shadow-red-600/20' 
         : 'text-gray-400 hover:text-white hover:bg-white/5'
     }`}
   >
@@ -69,7 +69,6 @@ const NavTab = ({ to, label, icon, active }: { to: string, label: string, icon: 
 // --- Pages ---
 
 const Dashboard: React.FC<{ projects: Project[], onDelete: (id: string) => void }> = ({ projects, onDelete }) => {
-  // Cálculo de métricas para o Dashboard
   const totalProjects = projects.length;
   const totalValue = projects.reduce((acc, p) => acc + (p.financeiro?.precoVendaFinal || 0), 0);
   const approvedCount = projects.filter(p => p.status === ProjectStatus.APPROVED).length;
@@ -77,102 +76,147 @@ const Dashboard: React.FC<{ projects: Project[], onDelete: (id: string) => void 
 
   return (
     <div className="p-8 max-w-7xl mx-auto animate-fadeIn">
-      {/* Header do Dashboard */}
-      <div className="flex justify-between items-center mb-10">
+      {/* Header Estilizado */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
         <div>
-          <h1 className="text-4xl font-black text-gray-900 tracking-tight italic uppercase">Dashboard Brasília</h1>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Gestão Estratégica de Projetos Cloud</p>
+          <h1 className="text-5xl font-black text-gray-900 tracking-tighter italic uppercase leading-none">
+            Visão <span className="text-red-600">Geral</span>
+          </h1>
+          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.4em] mt-3 flex items-center gap-2">
+            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Sistema de Gestão Brasília Cloud v3.0
+          </p>
         </div>
-        <Link to="/project/new" className="bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest flex items-center gap-3 shadow-2xl transition-all hover:scale-105 active:scale-95">
-          <i className="fa-solid fa-plus text-lg"></i> Novo Projeto
+        <Link 
+          to="/project/new" 
+          className="group relative bg-gray-900 text-white px-10 py-5 rounded-[2rem] font-black uppercase tracking-widest text-[11px] flex items-center gap-4 shadow-2xl transition-all hover:scale-105 active:scale-95 hover:bg-red-600"
+        >
+          <i className="fa-solid fa-plus text-lg transition-transform group-hover:rotate-90"></i> 
+          Nova Cotação
         </Link>
       </div>
 
-      {/* Grid de Indicadores (Métricas) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-        <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-5">
-            <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400">
-              <i className="fa-solid fa-folder-tree text-xl"></i>
-            </div>
-            <div>
-              <span className="text-[8px] font-black uppercase text-gray-400 block mb-1 tracking-widest">Total Projetos</span>
-              <span className="font-black text-2xl text-gray-950 tracking-tighter">{totalProjects}</span>
-            </div>
+      {/* Grid de KPIs com Design Premium */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+        <div className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-xl shadow-gray-200/40 relative overflow-hidden group">
+          <div className="absolute -right-4 -top-4 text-gray-50 text-7xl font-black group-hover:text-red-50 transition-colors">
+            <i className="fa-solid fa-briefcase"></i>
+          </div>
+          <span className="text-[9px] font-black uppercase text-gray-400 block mb-2 tracking-[0.2em] relative z-10">Projetos Ativos</span>
+          <span className="font-black text-4xl text-gray-950 tracking-tighter relative z-10">{totalProjects}</span>
+          <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-gray-400">
+            <i className="fa-solid fa-chart-line text-green-500"></i> Atualizado agora
           </div>
         </div>
 
-        <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-5">
-            <div className="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center text-red-600">
-              <i className="fa-solid fa-sack-dollar text-xl"></i>
-            </div>
-            <div>
-              <span className="text-[8px] font-black uppercase text-gray-400 block mb-1 tracking-widest">Valor em Carteira</span>
-              <span className="font-black text-2xl text-red-600 tracking-tighter italic">{formatCurrency(totalValue)}</span>
-            </div>
+        <div className="bg-red-600 p-8 rounded-[3rem] shadow-xl shadow-red-600/20 relative overflow-hidden group text-white">
+          <div className="absolute -right-4 -top-4 text-white/10 text-7xl font-black group-hover:text-white/20 transition-colors">
+            <i className="fa-solid fa-dollar-sign"></i>
+          </div>
+          <span className="text-[9px] font-black uppercase text-red-100 block mb-2 tracking-[0.2em] relative z-10">Valor em Orçamentos</span>
+          <span className="font-black text-3xl text-white tracking-tighter italic relative z-10">{formatCurrency(totalValue)}</span>
+          <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-red-100">
+            <i className="fa-solid fa-shield-halved"></i> Patrimônio em risco
           </div>
         </div>
 
-        <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-5">
-            <div className="w-14 h-14 bg-green-50 rounded-2xl flex items-center justify-center text-green-600">
-              <i className="fa-solid fa-circle-check text-xl"></i>
-            </div>
-            <div>
-              <span className="text-[8px] font-black uppercase text-gray-400 block mb-1 tracking-widest">Aprovados</span>
-              <span className="font-black text-2xl text-green-600 tracking-tighter">{approvedCount}</span>
-            </div>
+        <div className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-xl shadow-gray-200/40 relative overflow-hidden group">
+          <div className="absolute -right-4 -top-4 text-gray-50 text-7xl font-black group-hover:text-green-50 transition-colors">
+            <i className="fa-solid fa-check-double"></i>
+          </div>
+          <span className="text-[9px] font-black uppercase text-gray-400 block mb-2 tracking-[0.2em] relative z-10">Total Aprovado</span>
+          <span className="font-black text-4xl text-green-600 tracking-tighter relative z-10">{approvedCount}</span>
+          <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-gray-400">
+            <i className="fa-solid fa-circle-check text-green-500"></i> Metas do mês
           </div>
         </div>
 
-        <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-5">
-            <div className="w-14 h-14 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-500">
-              <i className="fa-solid fa-pen-ruler text-xl"></i>
-            </div>
-            <div>
-              <span className="text-[8px] font-black uppercase text-gray-400 block mb-1 tracking-widest">Rascunhos</span>
-              <span className="font-black text-2xl text-orange-500 tracking-tighter">{draftCount}</span>
-            </div>
+        <div className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-xl shadow-gray-200/40 relative overflow-hidden group">
+          <div className="absolute -right-4 -top-4 text-gray-50 text-7xl font-black group-hover:text-orange-50 transition-colors">
+            <i className="fa-solid fa-pen-nib"></i>
+          </div>
+          <span className="text-[9px] font-black uppercase text-gray-400 block mb-2 tracking-[0.2em] relative z-10">Aguardando</span>
+          <span className="font-black text-4xl text-orange-500 tracking-tighter relative z-10">{draftCount}</span>
+          <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-gray-400">
+            <i className="fa-solid fa-clock text-orange-400"></i> Pendentes
           </div>
         </div>
       </div>
 
-      {/* Título da Seção de Lista */}
-      <div className="flex items-center gap-4 mb-8">
-        <h2 className="text-[10px] font-black uppercase text-gray-950 tracking-[0.3em] bg-gray-100 px-6 py-2 rounded-full italic">Projetos Ativos</h2>
-        <div className="h-[1px] flex-1 bg-gray-200"></div>
+      {/* Lista de Projetos Estilizada */}
+      <div className="flex items-center justify-between mb-8 px-4">
+        <h2 className="text-[12px] font-black uppercase text-gray-900 tracking-[0.5em] italic">Timeline de Projetos</h2>
+        <div className="h-[2px] flex-1 bg-gradient-to-r from-gray-200 to-transparent mx-8 hidden sm:block"></div>
       </div>
 
       {projects.length === 0 ? (
-        <div className="text-center py-32 bg-white rounded-[3rem] border border-dashed border-gray-200">
-          <i className="fa-solid fa-folder-open text-6xl text-gray-200 mb-6"></i>
-          <h3 className="text-xl font-black uppercase text-gray-400">Nenhum projeto encontrado</h3>
-          <p className="text-xs text-gray-400 mt-2">Inicie um novo orçamento clicando no botão acima.</p>
+        <div className="text-center py-40 bg-white rounded-[4rem] border-4 border-dashed border-gray-50 flex flex-col items-center">
+          <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mb-8">
+            <i className="fa-solid fa-folder-open text-5xl text-gray-200"></i>
+          </div>
+          <h3 className="text-2xl font-black uppercase italic text-gray-300 tracking-widest">O banco de dados está vazio</h3>
+          <p className="text-[11px] text-gray-400 mt-4 uppercase font-bold tracking-[0.3em]">Comece sua primeira cotação profissional agora</p>
+          <Link to="/project/new" className="mt-10 text-red-600 font-black uppercase text-xs hover:underline tracking-widest">+ Criar Primeiro Registro</Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">
           {projects.map(p => (
-            <div key={p.id} className="bg-white rounded-[3rem] shadow-sm border border-gray-100 hover:shadow-2xl transition-all group overflow-hidden flex flex-col">
+            <div 
+              key={p.id} 
+              className="bg-white rounded-[3.5rem] shadow-lg shadow-gray-200/50 border border-gray-100 hover:shadow-2xl hover:-translate-y-2 transition-all group overflow-hidden flex flex-col"
+            >
               <div className="p-10 flex-1">
-                <div className="flex justify-between items-start mb-6">
+                <div className="flex justify-between items-start mb-8">
                   <div className="flex-1 pr-4">
-                    <h3 className="font-black text-2xl text-gray-900 uppercase italic tracking-tighter leading-tight mb-1 group-hover:text-red-600 truncate">{p.cliente || 'Cliente não definido'}</h3>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] truncate">{p.obra || 'Obra não definida'}</p>
+                    <p className="text-[8px] font-black text-red-500 uppercase tracking-widest mb-2 italic">Ref: {p.id.slice(0, 8).toUpperCase()}</p>
+                    <h3 className="font-black text-2xl text-gray-900 uppercase italic tracking-tighter leading-tight group-hover:text-red-600 transition-colors truncate">
+                      {p.cliente || 'Consumidor Final'}
+                    </h3>
+                    <div className="flex items-center gap-2 mt-2">
+                      <i className="fa-solid fa-location-dot text-[10px] text-gray-300"></i>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest truncate">{p.obra || 'Obra não identificada'}</p>
+                    </div>
                   </div>
-                  <span className={`text-[9px] px-3 py-1 rounded-full font-black uppercase border ${p.status === 'Aprovado' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-400'}`}>{p.status}</span>
+                  <span className={`text-[8px] px-4 py-2 rounded-full font-black uppercase tracking-widest border ${
+                    p.status === ProjectStatus.APPROVED 
+                      ? 'bg-green-50 text-green-600 border-green-100' 
+                      : 'bg-gray-50 text-gray-400 border-gray-100'
+                  }`}>
+                    {p.status}
+                  </span>
                 </div>
-                <div className="grid grid-cols-1 gap-4 bg-gray-50 p-6 rounded-[2rem] mt-8">
-                  <div>
-                    <span className="text-[8px] font-black uppercase text-gray-400 block mb-1">Preço Final (Materiais)</span>
-                    <span className="font-black text-xl text-red-600 italic">{formatCurrency(p.financeiro?.precoVendaFinal || 0)}</span>
+                
+                <div className="bg-gray-50/80 backdrop-blur-sm p-8 rounded-[2.5rem] border border-gray-100 mt-4">
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <span className="text-[8px] font-black uppercase text-gray-400 block mb-1 tracking-widest">Total Investimento</span>
+                      <span className="font-black text-2xl text-red-600 italic tracking-tighter">
+                        {formatCurrency(p.financeiro?.precoVendaFinal || 0)}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[8px] font-black uppercase text-gray-400 block mb-1 tracking-widest">Data</span>
+                      <span className="text-[10px] font-bold text-gray-900 uppercase">
+                        {new Date(p.dataCriacao).toLocaleDateString('pt-BR')}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
-              <div className="bg-gray-50 px-10 py-6 border-t flex justify-between items-center">
-                <button onClick={() => onDelete(p.id)} className="text-gray-300 hover:text-red-600 transition"><i className="fa-solid fa-trash-can text-xl"></i></button>
-                <Link to={`/project/${p.id}`} className="text-[10px] font-black uppercase text-gray-900 hover:text-red-600 tracking-widest italic">Acessar / Editar <i className="fa-solid fa-arrow-right ml-1"></i></Link>
+              
+              <div className="bg-gray-950 px-10 py-6 flex justify-between items-center text-white">
+                <button 
+                  onClick={() => onDelete(p.id)} 
+                  className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-white/10 transition-all"
+                  title="Excluir Registro"
+                >
+                  <i className="fa-solid fa-trash-can text-sm"></i>
+                </button>
+                <Link 
+                  to={`/project/${p.id}`} 
+                  className="text-[10px] font-black uppercase text-white hover:text-red-500 tracking-widest italic flex items-center gap-2 transition-colors"
+                >
+                  Abrir Projeto <i className="fa-solid fa-arrow-right-long transition-transform group-hover:translate-x-2"></i>
+                </Link>
               </div>
             </div>
           ))}
@@ -191,7 +235,6 @@ const ProductManager: React.FC<{
   const [isSaving, setIsSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Estados locais para garantir que o formulário seja reativo
   const [formName, setFormName] = useState('');
   const [formPrice, setFormPrice] = useState<number | string>(0);
 
@@ -261,9 +304,6 @@ const ProductManager: React.FC<{
             </p>
             {!searchTerm && (
               <button onClick={() => setEditing({ nome: '', preco: 0 })} className="mt-8 text-red-600 font-black uppercase text-xs hover:underline">+ Adicionar Primeiro Produto</button>
-            )}
-            {searchTerm && (
-              <button onClick={() => setSearchTerm('')} className="mt-8 text-red-600 font-black uppercase text-xs hover:underline">Limpar Pesquisa</button>
             )}
           </div>
         ) : (
@@ -608,7 +648,6 @@ const ProjectEditor: React.FC<{
 
   return (
     <>
-      {/* RENDERIZAÇÃO DE IMPRESSÃO / PRÉ-VISUALIZAÇÃO */}
       {printMode && (
         <div className="fixed inset-0 z-[99999] bg-gray-200 overflow-y-auto print:static print:bg-transparent print:p-0">
           <div className="no-print sticky top-0 bg-gray-900 p-4 flex justify-between items-center text-white shadow-2xl z-[100000]">
@@ -1097,12 +1136,12 @@ const App: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      <header className={`bg-gray-950 text-white sticky top-0 z-[100] border-b border-white/5 backdrop-blur-xl bg-opacity-95 no-print shadow-xl ${isPrinting ? 'hidden' : 'flex'}`}>
-        <div className="container mx-auto px-8 py-4 flex justify-between items-center w-full">
+    <div className="min-h-screen flex flex-col bg-gray-50/50">
+      <header className={`bg-gray-950 text-white sticky top-0 z-[100] border-b border-white/5 backdrop-blur-xl bg-opacity-95 no-print shadow-2xl shadow-gray-950/20 ${isPrinting ? 'hidden' : 'flex'}`}>
+        <div className="container mx-auto px-8 py-5 flex justify-between items-center w-full">
           <Link to="/"><Logo /></Link>
           <nav className="flex gap-4">
-            <NavTab to="/" label="Projetos" icon="fa-folder-tree" active={location.pathname === '/' || location.pathname.startsWith('/project')} />
+            <NavTab to="/" label="Dashboard" icon="fa-chart-pie" active={location.pathname === '/' || location.pathname.startsWith('/project')} />
             <NavTab to="/products" label="Produtos" icon="fa-boxes-stacked" active={location.pathname === '/products'} />
             <NavTab to="/kits" label="Kits" icon="fa-gears" active={location.pathname === '/kits'} />
           </nav>
@@ -1131,7 +1170,7 @@ const App: React.FC = () => {
 
       <style>{`
         @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fadeIn { animation: fadeIn 0.4s ease-out forwards; }
+        .animate-fadeIn { animation: fadeIn 0.5s cubic-bezier(0.23, 1, 0.32, 1) forwards; }
         
         @media print {
           .no-print { display: none !important; }
