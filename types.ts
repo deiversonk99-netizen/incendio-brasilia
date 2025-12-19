@@ -15,6 +15,39 @@ export enum FloorType {
   TERREO = 'Térreo'
 }
 
+export enum TaskStatus {
+  TODO = 'Pendente',
+  DOING = 'Em Andamento',
+  DONE = 'Concluída'
+}
+
+export enum TaskPriority {
+  LOW = 'Baixa',
+  MEDIUM = 'Média',
+  HIGH = 'Alta'
+}
+
+export interface ChecklistItem {
+  id: string;
+  texto: string;
+  concluido: boolean;
+}
+
+export interface Task {
+  id: string;
+  titulo: string;
+  descricao: string;
+  status: TaskStatus;
+  prioridade: TaskPriority;
+  dataVencimento: string;
+  projetoId?: string;
+  projetoNome?: string;
+  arquivoUrl?: string;
+  arquivoNome?: string;
+  tags?: string[];
+  checklist?: ChecklistItem[];
+}
+
 export interface Customer {
   id: string;
   nome: string;
@@ -101,11 +134,12 @@ export interface Project {
   endereco: string;
   status: ProjectStatus;
   pavimentos: Floor[];
-  condicoesPagamento: string; // Forma de Pagamento
-  cronograma: string;         // Prazo de Entrega
+  condicoesPagamento: string; 
+  cronograma: string;         
   observacoes: string;
   validadeDias: number;
   orcamentoItens: BudgetItem[];
   financeiro: FinancialSummary;
   dataCriacao: string;
+  propostaUrl?: string;
 }

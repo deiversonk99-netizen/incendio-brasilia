@@ -1,6 +1,6 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
-import { Product, Project, Kit, Customer } from '../types';
+import { Product, Project, Kit, Customer, Task } from '../types';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../constants';
 
 const isConfigured = () => {
@@ -19,35 +19,66 @@ const isUUID = (id: any) => {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 };
 
-export const checkDatabaseHealth = async () => {
-  const tables = ['produtos', 'clientes', 'kits', 'projetos'];
-  const status: Record<string, boolean> = {};
-  
-  if (!isConfigured()) return { configured: false, tables: {} };
-
-  for (const table of tables) {
-    const { error } = await supabase.from(table).select('id').limit(1);
-    status[table] = !error || (error.code !== '42P01');
+// --- TAREFAS ---
+export const fetchTasks = async (): Promise<Task[]> => {
+  if (!isConfigured()) return [];
+  try {
+    const { data, error } = await supabase.from('tarefas').select('*').order('data_vencimento', { ascending: true });
+    if (error) throw error;
+    return (data || []).map(t => ({
+      id: t.id,
+      titulo: t.titulo,
+      descricao: t.descricao,
+      status: t.status,
+      prioridade: t.prioridade,
+      dataVencimento: t.data_vencimento,
+      projetoId: t.projeto_id,
+      projetoNome: t.projeto_nome,
+      arquivoUrl: t.arquivo_url,
+      arquivoNome: t.arquivo_nome,
+      tags: t.tags || [],
+      checklist: t.checklist || []
+    }));
+  } catch (e) {
+    console.error("Erro ao carregar tarefas:", e);
+    return [];
   }
-
-  return { configured: true, tables: status };
 };
 
-const handleError = (error: any, context: string) => {
-  console.error(`Erro em ${context}:`, error);
-  const msg = error.message || "Erro desconhecido";
-  
-  if (!isConfigured()) {
-    alert("⚠️ CONFIGURAÇÃO FALTANDO: Você precisa colar sua 'anon key' no arquivo constants.ts.");
-    return msg;
+export const saveTask = async (task: Task) => {
+  if (!isConfigured()) throw new Error("Supabase não configurado");
+  const payload = {
+    titulo: task.titulo,
+    descricao: task.descricao,
+    status: task.status,
+    prioridade: task.prioridade,
+    data_vencimento: task.dataVencimento,
+    projeto_id: task.projetoId,
+    projeto_nome: task.projetoNome,
+    arquivo_url: task.arquivoUrl,
+    arquivo_nome: task.arquivoNome,
+    tags: task.tags,
+    checklist: task.checklist
+  };
+  try {
+    let res;
+    if (isUUID(task.id)) {
+      res = await supabase.from('tarefas').update(payload).eq('id', task.id).select();
+    } else {
+      res = await supabase.from('tarefas').insert([payload]).select();
+    }
+    if (res.error) throw res.error;
+    return res.data[0];
+  } catch (err: any) {
+    console.error("Erro ao salvar tarefa:", err);
+    throw err;
   }
+};
 
-  if (error.code === '42P01') {
-    alert(`ERRO DE BANCO: A tabela para "${context}" não existe. Execute o SQL de criação.`);
-  } else {
-    alert(`ERRO NO SUPABASE (${context}): ${msg}`);
-  }
-  return msg;
+export const deleteTask = async (id: string) => {
+  if (!isUUID(id) || !isConfigured()) return;
+  const { error } = await supabase.from('tarefas').delete().eq('id', id);
+  if (error) console.error("Erro ao excluir tarefa:", error);
 };
 
 // --- PRODUTOS ---
@@ -64,17 +95,13 @@ export const fetchProducts = async (): Promise<Product[]> => {
       isLocal: false
     }));
   } catch (e) {
-    handleError(e, "Carregar Produtos");
     return [];
   }
 };
 
 export const saveProduct = async (product: Product) => {
   if (!isConfigured()) throw new Error("Supabase não configurado");
-  
-  // Removemos explicitamente campos que não pertencem ao DB para evitar erro de cache de schema
   const { id, isLocal, ...cleanData } = product;
-  
   try {
     let res;
     if (isUUID(id)) {
@@ -85,15 +112,13 @@ export const saveProduct = async (product: Product) => {
     if (res.error) throw res.error;
     return res.data[0];
   } catch (err: any) {
-    handleError(err, "Salvar Produto");
     throw err;
   }
 };
 
 export const deleteProduct = async (id: string) => {
   if (!isUUID(id) || !isConfigured()) return;
-  const { error } = await supabase.from('produtos').delete().eq('id', id);
-  if (error) handleError(error, "Excluir Produto");
+  await supabase.from('produtos').delete().eq('id', id);
 };
 
 // --- CLIENTES ---
@@ -104,7 +129,6 @@ export const fetchCustomers = async (): Promise<Customer[]> => {
     if (error) throw error;
     return data || [];
   } catch (e) {
-    handleError(e, "Carregar Clientes");
     return [];
   }
 };
@@ -122,7 +146,6 @@ export const saveCustomer = async (customer: Customer) => {
     if (res.error) throw res.error;
     return res.data[0];
   } catch (err: any) {
-    handleError(err, "Salvar Cliente");
     throw err;
   }
 };
@@ -141,7 +164,6 @@ export const fetchKits = async (): Promise<Kit[]> => {
       ativo: k.ativo
     }));
   } catch (e) {
-    handleError(e, "Carregar Kits");
     return [];
   }
 };
@@ -164,7 +186,6 @@ export const saveKit = async (kit: Kit) => {
     if (res.error) throw res.error;
     return res.data[0];
   } catch (err: any) {
-    handleError(err, "Salvar Kit");
     throw err;
   }
 };
@@ -180,13 +201,13 @@ export const fetchProjects = async (): Promise<Project[]> => {
       id: p.id,
       clienteId: p.cliente_id,
       status: p.status,
+      propostaUrl: p.proposta_url,
       financeiro: {
         ...(p.dados_json?.financeiro || {}),
         precoVendaFinal: parseFloat(p.valor_venda) || 0
       }
     }));
   } catch (e) {
-    handleError(e, "Carregar Projetos");
     return [];
   }
 };
@@ -198,6 +219,7 @@ export const saveProject = async (project: Project) => {
     obra: project.obra || 'Sem nome',
     status: project.status,
     valor_venda: project.financeiro.precoVendaFinal || 0,
+    proposta_url: project.propostaUrl || null,
     dados_json: project
   };
   if (isUUID(project.clienteId)) {
@@ -213,13 +235,11 @@ export const saveProject = async (project: Project) => {
     if (res.error) throw res.error;
     return res.data[0];
   } catch (err: any) {
-    handleError(err, "Salvar Projeto");
     throw err;
   }
 };
 
 export const deleteProject = async (id: string) => {
   if (!isUUID(id) || !isConfigured()) return;
-  const { error } = await supabase.from('projetos').delete().eq('id', id);
-  if (error) handleError(error, "Excluir Projeto");
+  await supabase.from('projetos').delete().eq('id', id);
 };
