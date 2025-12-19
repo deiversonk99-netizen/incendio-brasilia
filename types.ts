@@ -27,6 +27,21 @@ export enum TaskPriority {
   HIGH = 'Alta'
 }
 
+// --- Novas Enums Financeiras ---
+export enum ExpenseCategory {
+  MATERIAL = 'Material/Insumos',
+  OPERATIONAL = 'Operacional/Viagem',
+  SALARY = 'Mão de Obra',
+  TAX = 'Impostos/Taxas',
+  OTHER = 'Outros'
+}
+
+export enum ExpenseStatus {
+  PENDING = 'Pendente',
+  PAID = 'Pago',
+  OVERDUE = 'Atrasado'
+}
+
 export interface ChecklistItem {
   id: string;
   texto: string;
@@ -56,6 +71,25 @@ export interface Customer {
   email: string;
   endereco: string;
   isLocal?: boolean;
+}
+
+export interface Supplier {
+  id: string;
+  nome: string;
+  cnpj?: string;
+  contato: string;
+  categoria: string;
+}
+
+export interface Expense {
+  id: string;
+  descricao: string;
+  valor: number;
+  dataVencimento: string;
+  categoria: ExpenseCategory;
+  status: ExpenseStatus;
+  fornecedorId?: string;
+  projetoId?: string; // Integração com projeto específico
 }
 
 export interface Product {
