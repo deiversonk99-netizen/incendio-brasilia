@@ -108,6 +108,7 @@ export const saveTask = async (task: Task) => {
     descricao: task.descricao,
     status: task.status,
     prioridade: task.prioridade,
+    // Fix: Using correct property name 'dataVencimento' from Task interface
     data_vencimento: task.dataVencimento,
     projeto_id: task.projetoId,
     projeto_nome: task.projetoNome,
@@ -148,7 +149,7 @@ export const saveCustomer = async (customer: Customer) => {
 
 export const fetchKits = async (): Promise<Kit[]> => {
   const { data } = await supabase.from('kits').select('*');
-  return (data || []).map(k => ({ ...(k.dados_json || {}), id: k.id, nomeKit: k.nome_kit, tipoInfra: k.tipo_infra, ativo: k.ativo }));
+  return (data || []).map(k => ({ ...(k.dados_json || {}), id: k.id, nomeKit: k.nome_kit, tipo_infra: k.tipo_infra, ativo: k.ativo }));
 };
 
 export const saveKit = async (kit: Kit) => {
@@ -156,6 +157,8 @@ export const saveKit = async (kit: Kit) => {
   if (isUUID(kit.id)) return (await supabase.from('kits').update(payload).eq('id', kit.id).select()).data?.[0];
   return (await supabase.from('kits').insert([payload]).select()).data?.[0];
 };
+
+export const deleteKit = async (id: string) => { if (isUUID(id)) await supabase.from('kits').delete().eq('id', id); };
 
 export const fetchProjects = async (): Promise<Project[]> => {
   const { data } = await supabase.from('projetos').select('*').order('created_at', { ascending: false });

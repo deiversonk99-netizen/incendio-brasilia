@@ -12,11 +12,9 @@ import {
   Floor, 
   Customer, 
   ManualItem,
-  KitComponent,
   Task,
   TaskStatus,
   TaskPriority,
-  ChecklistItem,
   Expense,
   ExpenseCategory,
   ExpenseStatus,
@@ -29,6 +27,7 @@ import {
   deleteProject,
   fetchKits, 
   saveKit,
+  deleteKit,
   fetchCustomers,
   saveCustomer,
   saveProduct,
@@ -43,7 +42,7 @@ import {
   saveSupplier
 } from './services/dbService';
 import { calculateComposition, updateFinancialTotals } from './services/calculationService';
-import { DEFAULT_KITS, DEFAULT_PROFIT_MARGIN } from './constants';
+import { DEFAULT_KITS } from './constants';
 
 // --- Utilities ---
 const formatCurrency = (value: number) => {
@@ -118,26 +117,28 @@ const ProposalDocument: React.FC<{ project: Project, isPreview?: boolean, id?: s
         </div>
       </div>
 
-      <div className="mb-12">
-        <h2 className="font-black uppercase text-xs text-red-600 mb-4 tracking-widest border-b pb-1">Detalhamento Técnico</h2>
-        <div className="grid grid-cols-1 gap-4">
-          {project.pavimentos.map((p, idx) => (
-            <div key={idx} className="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-100">
-              <div>
-                <span className="font-black uppercase text-[10px] text-gray-400">{p.tipo}</span>
-                <p className="font-bold">{p.nome} {p.referenciaPrancha && <span className="text-gray-400 font-normal">({p.referenciaPrancha})</span>}</p>
-                <span className="text-[8px] text-gray-400 font-bold">{p.largura}m x {p.comprimento}m | H: {p.altura}m</span>
+      {project.pavimentos.length > 0 && (
+        <div className="mb-12">
+          <h2 className="font-black uppercase text-xs text-red-600 mb-4 tracking-widest border-b pb-1">Detalhamento Técnico</h2>
+          <div className="grid grid-cols-1 gap-4">
+            {project.pavimentos.map((p, idx) => (
+              <div key={idx} className="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-100">
+                <div>
+                  <span className="font-black uppercase text-[10px] text-gray-400">{p.tipo}</span>
+                  <p className="font-bold">{p.nome} {p.referenciaPrancha && <span className="text-gray-400 font-normal">({p.referenciaPrancha})</span>}</p>
+                  <span className="text-[8px] text-gray-400 font-bold">{p.largura}m x {p.comprimento}m | H: {p.altura}m</span>
+                </div>
+                <div className="flex gap-6 text-[10px] font-bold uppercase">
+                  {p.infraestruturas.map((inf, i) => (
+                    <span key={i} className="text-gray-500">{inf.tipo}: <b className="text-gray-900">{inf.metragem}m</b></span>
+                  ))}
+                  <span>Dispositivos: <b className="text-gray-900">{p.itensCentrais.length} un</b></span>
+                </div>
               </div>
-              <div className="flex gap-6 text-[10px] font-bold uppercase">
-                {p.infraestruturas.map((inf, i) => (
-                  <span key={i} className="text-gray-500">{inf.tipo}: <b className="text-gray-900">{inf.metragem}m</b></span>
-                ))}
-                <span>Dispositivos: <b className="text-gray-900">{p.itensCentrais.length} un</b></span>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="mb-12">
         <h2 className="font-black uppercase text-xs text-red-600 mb-4 tracking-widest border-b pb-1">Composição de Materiais</h2>
@@ -197,7 +198,6 @@ const FinanceManager: React.FC<{
 }> = ({ projects, expenses, suppliers, onSaveExpense, onDeleteExpense, onSaveSupplier }) => {
   const [activeTab, setActiveTab] = useState<'dash' | 'expenses' | 'suppliers'>('dash');
   const [editingExpense, setEditingExpense] = useState<Partial<Expense> | null>(null);
-  const [editingSupplier, setEditingSupplier] = useState<Partial<Supplier> | null>(null);
 
   const stats = useMemo(() => {
     const revenue = projects
@@ -242,15 +242,15 @@ const FinanceManager: React.FC<{
       {activeTab === 'dash' && (
         <div className="space-y-12">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-gray-950 p-12 rounded-[4rem] text-white relative overflow-hidden group">
+            <div className="bg-gray-950 p-12 rounded-[4rem] text-white">
               <span className="text-[9px] font-black uppercase text-gray-400 block mb-2 tracking-widest">Receita (Aprovados)</span>
               <span className="text-4xl font-black italic tracking-tighter text-green-500">{formatCurrency(stats.revenue)}</span>
             </div>
-            <div className="bg-gray-950 p-12 rounded-[4rem] text-white relative overflow-hidden group">
+            <div className="bg-gray-950 p-12 rounded-[4rem] text-white">
               <span className="text-[9px] font-black uppercase text-gray-400 block mb-2 tracking-widest">Saídas Globais</span>
               <span className="text-4xl font-black italic tracking-tighter text-red-500">{formatCurrency(stats.totalExpenses)}</span>
             </div>
-            <div className="bg-white p-12 rounded-[4rem] border border-gray-100 shadow-2xl relative overflow-hidden group">
+            <div className="bg-white p-12 rounded-[4rem] border border-gray-100 shadow-2xl">
               <span className="text-[9px] font-black uppercase text-gray-400 block mb-2 tracking-widest">Saldo Atual</span>
               <span className={`text-4xl font-black italic tracking-tighter ${stats.balance >= 0 ? 'text-gray-950' : 'text-red-600'}`}>
                 {formatCurrency(stats.balance)}
@@ -262,7 +262,7 @@ const FinanceManager: React.FC<{
 
       {activeTab === 'expenses' && (
         <div className="space-y-8">
-           <div className="flex justify-between items-center mb-10 px-6">
+           <div className="flex justify-between items-center mb-10">
              <h2 className="text-[14px] font-black uppercase text-gray-950 tracking-[0.6em] italic">Despesas Operacionais</h2>
              <button 
               onClick={() => setEditingExpense({ descricao: '', valor: 0, status: ExpenseStatus.PENDING, categoria: ExpenseCategory.MATERIAL, dataVencimento: new Date().toISOString().split('T')[0] })}
@@ -328,6 +328,7 @@ const ProjectEditor: React.FC<{
   const [project, setProject] = useState<Project | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [viewMode, setViewMode] = useState<'editor' | 'proposal'>('editor');
+  const [methodology, setMethodology] = useState<'technical' | 'direct'>('technical');
 
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
@@ -353,7 +354,11 @@ const ProjectEditor: React.FC<{
       });
     } else {
       const found = projects.find(p => p.id === id);
-      if (found) setProject(JSON.parse(JSON.stringify(found)));
+      if (found) {
+        const p = JSON.parse(JSON.stringify(found));
+        setProject(p);
+        if (p.pavimentos.length === 0 && p.orcamentoItens.length > 0) setMethodology('direct');
+      }
     }
   }, [id, projects]);
 
@@ -362,6 +367,7 @@ const ProjectEditor: React.FC<{
   const handleCalculate = () => {
     const { items, financial } = calculateComposition(project, products, kits);
     setProject({ ...project, orcamentoItens: items, financeiro: financial, status: ProjectStatus.CALCULATED });
+    alert('Cálculo realizado com sucesso!');
   };
 
   const handleUpdateBudgetManual = (itemId: string, field: 'qtdFinal' | 'custoUnitario', value: number) => {
@@ -381,6 +387,27 @@ const ProjectEditor: React.FC<{
       custoMateriais: materialCost
     });
 
+    setProject({ ...project, orcamentoItens: newItems, financeiro: newFinancial });
+  };
+
+  const handleAddBudgetManual = () => {
+    if (!project) return;
+    const prod = products[0];
+    const newItem: BudgetItem = {
+      id: Math.random().toString(36).substr(2, 9),
+      produtoNome: prod?.nome || 'Novo Item',
+      origem: 'manual',
+      qtdSistema: 1,
+      qtdFinal: 1,
+      custoUnitario: prod?.preco || 0,
+      custoTotal: prod?.preco || 0
+    };
+    const newItems = [...project.orcamentoItens, newItem];
+    const materialCost = newItems.reduce((acc, it) => acc + it.custoTotal, 0);
+    const newFinancial = updateFinancialTotals({
+      ...project.financeiro,
+      custoMateriais: materialCost
+    });
     setProject({ ...project, orcamentoItens: newItems, financeiro: newFinancial });
   };
 
@@ -437,9 +464,13 @@ const ProjectEditor: React.FC<{
         </div>
         <div className="flex flex-wrap gap-4">
           <button onClick={() => setViewMode('proposal')} className="bg-white border px-8 py-4 rounded-[2rem] font-black uppercase text-[10px] shadow-sm hover:border-red-600 transition">Visualizar Proposta</button>
-          <button onClick={handleCalculate} className="bg-red-600 text-white px-10 py-4 rounded-[2rem] font-black uppercase text-[10px] shadow-xl hover:scale-105 transition">Calcular Materiais</button>
           <button onClick={async () => { await onSave(project); navigate('/'); }} className="bg-gray-950 text-white px-10 py-4 rounded-[2rem] font-black uppercase text-[10px] shadow-xl hover:bg-red-600 transition">Salvar Tudo</button>
         </div>
+      </div>
+
+      <div className="flex bg-gray-200 p-2 rounded-[2.5rem] w-fit shadow-inner">
+        <button onClick={() => setMethodology('technical')} className={`px-10 py-3 rounded-full font-black uppercase text-[10px] tracking-widest transition-all ${methodology === 'technical' ? 'bg-white text-red-600 shadow-lg' : 'text-gray-400'}`}>1. Metodologia Técnica</button>
+        <button onClick={() => setMethodology('direct')} className={`px-10 py-3 rounded-full font-black uppercase text-[10px] tracking-widest transition-all ${methodology === 'direct' ? 'bg-white text-red-600 shadow-lg' : 'text-gray-400'}`}>2. Orçamento Direto</button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
@@ -486,10 +517,10 @@ const ProjectEditor: React.FC<{
         </div>
 
         <div className="bg-gray-950 p-10 rounded-[4rem] shadow-2xl text-white h-fit sticky top-8">
-           <h3 className="font-black uppercase italic text-red-600 text-[10px] mb-8 border-b border-white/10 pb-4 tracking-widest">Configuração de Venda</h3>
+           <h3 className="font-black uppercase italic text-red-600 text-[10px] mb-8 border-b border-white/10 pb-4 tracking-widest">Resultados Finais</h3>
            <div className="space-y-6">
               <div className="flex justify-between items-end">
-                <span className="text-[10px] font-black uppercase text-gray-400">Total Insumos</span>
+                <span className="text-[10px] font-black uppercase text-gray-400">Total Materiais</span>
                 <span className="font-black text-2xl italic">{formatCurrency(project.financeiro.custoMateriais)}</span>
               </div>
               <div className="flex justify-between items-end border-t border-white/10 pt-4">
@@ -505,198 +536,367 @@ const ProjectEditor: React.FC<{
                    <span className="text-[8px] font-black uppercase text-gray-500">Margem (%)</span>
                    <input type="number" value={project.financeiro.margemLucroPercentual} onChange={e => setProject({...project, financeiro: updateFinancialTotals({...project.financeiro, margemLucroPercentual: parseFloat(e.target.value) || 0})})} className="w-full bg-white/5 p-4 rounded-xl border border-white/10 text-white font-bold text-sm outline-none focus:ring-1 focus:ring-red-600" />
                  </label>
-                 <label className="col-span-2">
-                   <span className="text-[8px] font-black uppercase text-gray-500">Estado da Proposta</span>
-                   <select value={project.status} onChange={e => setProject({...project, status: e.target.value as ProjectStatus})} className="w-full bg-white/5 p-4 rounded-xl border border-white/10 text-white font-black uppercase text-[10px] outline-none focus:ring-1 focus:ring-red-600 mt-1">
-                      {Object.values(ProjectStatus).map(s => <option key={s} value={s} className="bg-gray-900">{s}</option>)}
-                   </select>
-                 </label>
               </div>
            </div>
         </div>
       </div>
 
-      <div className="space-y-10">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 px-6">
-          <h2 className="text-4xl font-black uppercase italic tracking-tighter">Detalhamento dos <span className="text-red-600">Pavimentos</span></h2>
-          <button onClick={handleAddFloor} className="bg-gray-950 text-white px-10 py-4 rounded-[2rem] font-black uppercase text-[10px] tracking-widest hover:bg-red-600 transition shadow-xl">+ Novo Pavimento</button>
-        </div>
-
-        {project.pavimentos.map((floor, fIdx) => (
-          <div key={floor.id} className="bg-white p-12 rounded-[5rem] shadow-xl border border-gray-100 hover:shadow-2xl transition-all">
-             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-10 border-b pb-8 gap-10">
-                <div className="flex flex-wrap gap-8 items-start flex-1 w-full">
-                   <div className="flex flex-col flex-1 min-w-[200px]">
-                      <span className="text-[8px] font-black uppercase text-gray-400 tracking-widest mb-1">Nome / Identificação</span>
-                      <input value={floor.nome} onChange={e => {
-                        const n = [...project.pavimentos]; n[fIdx].nome = e.target.value; setProject({...project, pavimentos: n});
-                      }} className="font-black uppercase italic text-3xl bg-transparent border-none outline-none tracking-tighter text-gray-950 focus:text-red-600 transition-colors w-full" />
-                   </div>
-                   <div className="flex flex-col">
-                      <span className="text-[8px] font-black uppercase text-gray-400 tracking-widest mb-1">Prancha de Ref.</span>
-                      <input value={floor.referenciaPrancha} onChange={e => {
-                        const n = [...project.pavimentos]; n[fIdx].referenciaPrancha = e.target.value; setProject({...project, pavimentos: n});
-                      }} className="bg-gray-50 px-4 py-2 rounded-xl font-bold text-xs border-none outline-none focus:ring-2 focus:ring-red-600" />
-                   </div>
-                   <div className="flex flex-col">
-                      <span className="text-[8px] font-black uppercase text-gray-400 tracking-widest mb-1">Tipo de Área</span>
-                      <select value={floor.tipo} onChange={e => {
-                         const n = [...project.pavimentos]; n[fIdx].tipo = e.target.value as FloorType; setProject({...project, pavimentos: n});
-                      }} className="bg-gray-50 px-4 py-2 rounded-xl font-black text-[10px] uppercase border-none outline-none focus:ring-2 focus:ring-red-600 transition-all">
-                         {Object.values(FloorType).map(t => <option key={t} value={t}>{t}</option>)}
-                      </select>
-                   </div>
-                </div>
-                <button onClick={() => confirm(`Excluir ${floor.nome}?`) && setProject({...project, pavimentos: project.pavimentos.filter((_, idx) => idx !== fIdx)})} className="text-red-200 hover:text-red-600 transition-all p-4"><i className="fa-solid fa-trash-can text-2xl"></i></button>
-             </div>
-
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16 border-b pb-12">
-                <div className="flex flex-col gap-2">
-                  <span className="text-[8px] font-black uppercase text-gray-400 tracking-widest">Largura (m)</span>
-                  <input type="number" step="0.01" value={floor.largura} onChange={e => {
-                    const n = [...project.pavimentos]; n[fIdx].largura = parseFloat(e.target.value) || 0; setProject({...project, pavimentos: n});
-                  }} className="w-full bg-gray-50 p-4 rounded-2xl font-black text-xl italic text-gray-950 border-none outline-none focus:ring-2 focus:ring-red-600" />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <span className="text-[8px] font-black uppercase text-gray-400 tracking-widest">Comprimento (m)</span>
-                  <input type="number" step="0.01" value={floor.comprimento} onChange={e => {
-                    const n = [...project.pavimentos]; n[fIdx].comprimento = parseFloat(e.target.value) || 0; setProject({...project, pavimentos: n});
-                  }} className="w-full bg-gray-50 p-4 rounded-2xl font-black text-xl italic text-gray-950 border-none outline-none focus:ring-2 focus:ring-red-600" />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <span className="text-[8px] font-black uppercase text-gray-400 tracking-widest">Pé Direito (m)</span>
-                  <input type="number" step="0.01" value={floor.altura} onChange={e => {
-                    const n = [...project.pavimentos]; n[fIdx].altura = parseFloat(e.target.value) || 0; setProject({...project, pavimentos: n});
-                  }} className="w-full bg-gray-50 p-4 rounded-2xl font-black text-xl italic text-gray-950 border-none outline-none focus:ring-2 focus:ring-red-600" />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <span className="text-[8px] font-black uppercase text-gray-400 tracking-widest">Área Total (m²)</span>
-                  <div className="w-full bg-gray-100 p-4 rounded-2xl font-black text-xl italic text-gray-400 border-none select-none">
-                    {(floor.largura * floor.comprimento).toFixed(2)}
-                  </div>
-                </div>
-             </div>
-
-             <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-                <div>
-                   <h4 className="text-[10px] font-black uppercase text-red-600 mb-8 tracking-[0.4em] flex items-center gap-2">
-                     <i className="fa-solid fa-ruler-horizontal"></i> Metragem de Infra (m)
-                   </h4>
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {kits.map(k => (
-                        <div key={k.id} className="bg-gray-50 p-6 rounded-[2.5rem] flex flex-col gap-3 group hover:bg-white border border-transparent hover:border-gray-200 transition-all shadow-sm">
-                           <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest">{k.nomeKit}</span>
-                           <input 
-                              type="number" 
-                              value={floor.infraestruturas.find(i => i.tipo === k.tipoInfra)?.metragem || 0}
-                              onChange={e => {
-                                 const n = [...project.pavimentos];
-                                 const idx = n[fIdx].infraestruturas.findIndex(i => i.tipo === k.tipoInfra);
-                                 const val = parseFloat(e.target.value) || 0;
-                                 if (idx >= 0) n[fIdx].infraestruturas[idx].metragem = val;
-                                 else n[fIdx].infraestruturas.push({ tipo: k.tipoInfra, metragem: val });
-                                 setProject({...project, pavimentos: n});
-                              }}
-                              className="w-full bg-white p-4 rounded-2xl font-black text-2xl italic text-gray-950 border-none outline-none shadow-sm text-center focus:ring-2 focus:ring-red-600 transition-all"
-                           />
-                        </div>
-                      ))}
-                   </div>
-                </div>
-
-                <div>
-                   <div className="flex justify-between items-center mb-8">
-                      <h4 className="text-[10px] font-black uppercase text-gray-950 tracking-[0.4em] flex items-center gap-2">
-                        <i className="fa-solid fa-microchip"></i> Itens Manuais / Centrais
-                      </h4>
-                      <button onClick={() => {
-                         const n = [...project.pavimentos];
-                         n[fIdx].itensCentrais.push({ id: Math.random().toString(), produtoNome: products[0]?.nome || '', quantidade: 1 });
-                         setProject({...project, pavimentos: n});
-                      }} className="text-[9px] font-black uppercase text-red-600 hover:underline tracking-widest transition-all">
-                        + Novo Item
-                      </button>
-                   </div>
-                   <div className="space-y-4">
-                      {floor.itensCentrais.map((item, iIdx) => (
-                        <div key={iIdx} className="flex flex-col md:flex-row items-center gap-4 bg-gray-50 p-5 rounded-[2rem] border border-transparent hover:border-gray-200 transition-all">
-                           <select value={item.produtoNome} onChange={e => {
-                              const n = [...project.pavimentos]; n[fIdx].itensCentrais[iIdx].produtoNome = e.target.value; setProject({...project, pavimentos: n});
-                           }} className="flex-1 bg-transparent border-none outline-none text-xs font-black uppercase text-gray-950 focus:text-red-600 transition-colors">
-                              {products.map(p => <option key={p.id} value={p.nome}>{p.nome}</option>)}
-                           </select>
-                           <div className="flex items-center gap-3">
-                             <input type="number" value={item.quantidade} onChange={e => {
-                                const n = [...project.pavimentos]; n[fIdx].itensCentrais[iIdx].quantidade = parseFloat(e.target.value) || 0; setProject({...project, pavimentos: n});
-                             }} className="w-20 bg-white p-3 rounded-xl text-center font-black text-lg italic border-none shadow-sm focus:ring-2 focus:ring-red-600 transition-all" />
-                           </div>
-                           <button onClick={() => {
-                              const n = [...project.pavimentos]; n[fIdx].itensCentrais = n[fIdx].itensCentrais.filter((_, idx) => idx !== iIdx); setProject({...project, pavimentos: n});
-                           }} className="text-gray-200 hover:text-red-600 transition-all p-2"><i className="fa-solid fa-xmark text-xl"></i></button>
-                        </div>
-                      ))}
-                   </div>
-                </div>
-             </div>
+      {methodology === 'technical' && (
+        <div className="space-y-10 animate-fadeIn">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 px-6">
+            <h2 className="text-4xl font-black uppercase italic tracking-tighter">Cálculo de <span className="text-red-600">Engenharia</span></h2>
+            <div className="flex gap-4">
+               <button onClick={handleAddFloor} className="bg-gray-950 text-white px-10 py-4 rounded-[2rem] font-black uppercase text-[10px] tracking-widest hover:bg-red-600 transition shadow-xl">+ Novo Pavimento</button>
+               <button onClick={handleCalculate} className="bg-red-600 text-white px-10 py-4 rounded-[2rem] font-black uppercase text-[10px] shadow-xl hover:scale-105 transition">Processar Cálculo</button>
+            </div>
           </div>
-        ))}
-      </div>
 
-      {project.orcamentoItens.length > 0 && (
+          {project.pavimentos.map((floor, fIdx) => (
+            <div key={floor.id} className="bg-white p-12 rounded-[5rem] shadow-xl border border-gray-100">
+               <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-10 border-b pb-8 gap-10">
+                  <div className="flex flex-wrap gap-8 items-start flex-1 w-full">
+                     <div className="flex flex-col flex-1 min-w-[200px]">
+                        <span className="text-[8px] font-black uppercase text-gray-400 tracking-widest mb-1">Nome / Identificação</span>
+                        <input value={floor.nome} onChange={e => {
+                          const n = [...project.pavimentos]; n[fIdx].nome = e.target.value; setProject({...project, pavimentos: n});
+                        }} className="font-black uppercase italic text-3xl bg-transparent border-none outline-none tracking-tighter text-gray-950 focus:text-red-600 transition-colors w-full" />
+                     </div>
+                  </div>
+                  <button onClick={() => confirm(`Excluir ${floor.nome}?`) && setProject({...project, pavimentos: project.pavimentos.filter((_, idx) => idx !== fIdx)})} className="text-red-200 hover:text-red-600 transition-all p-4"><i className="fa-solid fa-trash-can text-2xl"></i></button>
+               </div>
+
+               <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+                  <div>
+                     <h4 className="text-[10px] font-black uppercase text-red-600 mb-8 tracking-[0.4em] flex items-center gap-2">
+                       <i className="fa-solid fa-ruler-horizontal"></i> Metragem de Infra (m)
+                     </h4>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {kits.map(k => (
+                          <div key={k.id} className="bg-gray-50 p-6 rounded-[2.5rem] flex flex-col gap-3 group hover:bg-white border border-transparent hover:border-gray-200 transition-all shadow-sm">
+                             <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest">{k.nomeKit}</span>
+                             <input 
+                                type="number" 
+                                value={floor.infraestruturas.find(i => i.tipo === k.tipoInfra)?.metragem || 0}
+                                onChange={e => {
+                                   const n = [...project.pavimentos];
+                                   const idx = n[fIdx].infraestruturas.findIndex(i => i.tipo === k.tipoInfra);
+                                   const val = parseFloat(e.target.value) || 0;
+                                   if (idx >= 0) n[fIdx].infraestruturas[idx].metragem = val;
+                                   else n[fIdx].infraestruturas.push({ tipo: k.tipoInfra, metragem: val });
+                                   setProject({...project, pavimentos: n});
+                                }}
+                                className="w-full bg-white p-4 rounded-2xl font-black text-2xl italic text-gray-950 border-none outline-none shadow-sm text-center focus:ring-2 focus:ring-red-600 transition-all"
+                             />
+                          </div>
+                        ))}
+                     </div>
+                  </div>
+
+                  <div className="max-w-full overflow-hidden">
+                     <div className="flex justify-between items-center mb-8 px-2">
+                        <h4 className="text-[10px] font-black uppercase text-gray-950 tracking-[0.4em] flex items-center gap-2">
+                          <i className="fa-solid fa-microchip"></i> Itens Manuais / Centrais
+                        </h4>
+                        <button onClick={() => {
+                           const n = [...project.pavimentos];
+                           n[fIdx].itensCentrais.push({ id: Math.random().toString(), produtoNome: products[0]?.nome || '', quantidade: 1 });
+                           setProject({...project, pavimentos: n});
+                        }} className="text-[9px] font-black uppercase text-red-600 hover:underline tracking-widest transition-all">
+                          + Novo Item
+                        </button>
+                     </div>
+                     <div className="space-y-4 px-2">
+                        {floor.itensCentrais.map((item, iIdx) => (
+                          <div key={iIdx} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 bg-gray-50 p-5 rounded-[2.5rem] border border-transparent hover:border-gray-200 transition-all w-full overflow-hidden">
+                             <select value={item.produtoNome} onChange={e => {
+                                const n = [...project.pavimentos]; n[fIdx].itensCentrais[iIdx].produtoNome = e.target.value; setProject({...project, pavimentos: n});
+                             }} className="flex-1 min-w-0 bg-transparent border-none outline-none text-[11px] font-black uppercase text-gray-950 focus:text-red-600 transition-colors truncate">
+                                {products.map(p => <option key={p.id} value={p.nome}>{p.nome}</option>)}
+                             </select>
+                             <div className="flex items-center justify-between sm:justify-start gap-4 bg-white px-5 py-3 rounded-2xl shadow-sm shrink-0 border border-gray-100">
+                               <span className="text-[8px] font-black uppercase text-gray-400">Quantidade</span>
+                               <input type="number" value={item.quantidade} onChange={e => {
+                                  const n = [...project.pavimentos]; n[fIdx].itensCentrais[iIdx].quantidade = parseFloat(e.target.value) || 0; setProject({...project, pavimentos: n});
+                               }} className="w-16 bg-transparent text-center font-black text-lg italic border-none outline-none focus:ring-0" />
+                             </div>
+                             <button onClick={() => {
+                                const n = [...project.pavimentos]; n[fIdx].itensCentrais = n[fIdx].itensCentrais.filter((_, idx) => idx !== iIdx); setProject({...project, pavimentos: n});
+                             }} className="text-gray-200 hover:text-red-600 transition-all p-2 shrink-0 self-end sm:self-auto"><i className="fa-solid fa-trash-can text-xl"></i></button>
+                          </div>
+                        ))}
+                     </div>
+                  </div>
+               </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {(methodology === 'direct' || project.orcamentoItens.length > 0) && (
         <div className="bg-white p-12 rounded-[5rem] shadow-2xl border border-gray-100 mt-16 animate-fadeIn">
-           <div className="flex justify-between items-center mb-10 border-b pb-6">
-             <h3 className="text-3xl font-black uppercase italic tracking-tighter text-gray-950">Ajuste Final de <span className="text-red-600">Quantitativos e Preços</span></h3>
-             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Edite diretamente os valores abaixo se necessário</p>
+           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 border-b pb-6 gap-6">
+             <div>
+               <h3 className="text-3xl font-black uppercase italic tracking-tighter text-gray-950">Composição do <span className="text-red-600">Orçamento Final</span></h3>
+               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Ajuste os itens diretamente para a proposta</p>
+             </div>
+             <button onClick={handleAddBudgetManual} className="bg-gray-950 text-white px-10 py-4 rounded-full font-black uppercase text-[10px] hover:bg-red-600 transition shadow-xl tracking-widest">+ Adicionar Item Direto</button>
            </div>
            <div className="overflow-x-auto">
-              <table className="w-full text-left">
+              <table className="w-full text-left min-w-[700px]">
                  <thead>
                     <tr className="text-[10px] font-black uppercase text-gray-400 border-b pb-6 tracking-widest">
-                       <th className="pb-6">Descrição do Material</th>
-                       <th className="pb-6 text-center">Tipo</th>
-                       <th className="pb-6 text-center">Quantidade Final</th>
-                       <th className="pb-6 text-right">Preço Unit. (R$)</th>
-                       <th className="pb-6 text-right">Total Item</th>
+                       <th className="pb-6">Descrição</th>
+                       <th className="pb-6 text-center">Origem</th>
+                       <th className="pb-6 text-center">Quantidade</th>
+                       <th className="pb-6 text-right">Unitário</th>
+                       <th className="pb-6 text-right">Total</th>
+                       <th className="pb-6 w-10"></th>
                     </tr>
                  </thead>
                  <tbody className="divide-y divide-gray-50">
                     {project.orcamentoItens.map(item => (
                        <tr key={item.id} className="group hover:bg-gray-50 transition-colors">
-                          <td className="py-6 font-black uppercase text-xs text-gray-950">{item.produtoNome}</td>
+                          <td className="py-6 font-black uppercase text-xs text-gray-950 min-w-[200px]">
+                            <select 
+                              value={item.produtoNome} 
+                              onChange={(e) => {
+                                const prod = products.find(p => p.nome === e.target.value);
+                                const newItems = project.orcamentoItens.map(it => it.id === item.id ? { ...it, produtoNome: e.target.value, custoUnitario: prod?.preco || 0, custoTotal: it.qtdFinal * (prod?.preco || 0) } : it);
+                                const cost = newItems.reduce((a, b) => a + b.custoTotal, 0);
+                                setProject({ ...project, orcamentoItens: newItems, financeiro: updateFinancialTotals({ ...project.financeiro, custoMateriais: cost }) });
+                              }}
+                              className="bg-transparent border-none outline-none font-black text-xs uppercase focus:text-red-600 transition-colors w-full"
+                            >
+                              {products.map(p => <option key={p.id} value={p.nome}>{p.nome}</option>)}
+                            </select>
+                          </td>
                           <td className="py-6 text-center">
                              <span className={`text-[8px] font-black uppercase px-3 py-1 rounded-full border ${item.origem === 'calculado' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-orange-50 text-orange-600 border-orange-100'}`}>
                                 {item.origem}
                              </span>
                           </td>
                           <td className="py-6 text-center">
-                            <input 
-                              type="number" 
-                              value={item.qtdFinal} 
-                              onChange={(e) => handleUpdateBudgetManual(item.id, 'qtdFinal', parseFloat(e.target.value) || 0)}
-                              className="w-24 bg-gray-50 p-2 rounded-lg text-center font-black border-none outline-none focus:ring-2 focus:ring-red-600"
-                            />
+                            <input type="number" value={item.qtdFinal} onChange={(e) => handleUpdateBudgetManual(item.id, 'qtdFinal', parseFloat(e.target.value) || 0)} className="w-24 bg-gray-50 p-2 rounded-lg text-center font-black border-none outline-none focus:ring-2 focus:ring-red-600" />
                           </td>
                           <td className="py-6 text-right">
-                            <input 
-                              type="number" 
-                              step="0.01"
-                              value={item.custoUnitario} 
-                              onChange={(e) => handleUpdateBudgetManual(item.id, 'custoUnitario', parseFloat(e.target.value) || 0)}
-                              className="w-32 bg-gray-50 p-2 rounded-lg text-right font-bold border-none outline-none focus:ring-2 focus:ring-red-600"
-                            />
+                            <input type="number" step="0.01" value={item.custoUnitario} onChange={(e) => handleUpdateBudgetManual(item.id, 'custoUnitario', parseFloat(e.target.value) || 0)} className="w-32 bg-gray-50 p-2 rounded-lg text-right font-bold border-none outline-none focus:ring-2 focus:ring-red-600" />
                           </td>
                           <td className="py-6 text-right font-black text-gray-950 italic">{formatCurrency(item.custoTotal)}</td>
+                          <td className="py-6 text-right">
+                            <button onClick={() => confirm('Remover?') && setProject({ ...project, orcamentoItens: project.orcamentoItens.filter(it => it.id !== item.id), financeiro: updateFinancialTotals({ ...project.financeiro, custoMateriais: project.orcamentoItens.filter(it => it.id !== item.id).reduce((a, b) => a + b.custoTotal, 0) }) })} className="text-gray-200 hover:text-red-600 transition-all p-2">
+                              <i className="fa-solid fa-trash"></i>
+                            </button>
+                          </td>
                        </tr>
                     ))}
                  </tbody>
                  <tfoot>
                     <tr>
-                       <td colSpan={4} className="py-10 text-right font-black uppercase text-xs text-gray-400 tracking-widest">Soma dos Insumos Selecionados:</td>
+                       <td colSpan={4} className="py-10 text-right font-black uppercase text-xs text-gray-400 tracking-widest">Soma Total de Materiais:</td>
                        <td className="py-10 text-right font-black text-3xl italic text-gray-950 tracking-tighter">{formatCurrency(project.financeiro.custoMateriais)}</td>
                     </tr>
                  </tfoot>
               </table>
            </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// --- Operations Manager ---
+
+const TaskManager: React.FC<{ 
+  tasks: Task[], 
+  projects: Project[], 
+  onSave: (t: Task) => Promise<void>, 
+  onDelete: (id: string) => Promise<void> 
+}> = ({ tasks, projects, onSave, onDelete }) => {
+  const [editing, setEditing] = useState<Partial<Task> | null>(null);
+  return (
+    <div className="p-8 max-w-7xl mx-auto animate-fadeIn">
+      <h1 className="text-6xl font-black italic uppercase leading-none mb-16">Operação</h1>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+        {[TaskStatus.TODO, TaskStatus.DOING, TaskStatus.DONE].map(status => (
+          <div key={status} className="bg-gray-100/50 p-8 rounded-[3rem] min-h-[500px]">
+            <h3 className="font-black uppercase italic text-gray-400 text-xs mb-8 tracking-[0.4em] px-4">{status}</h3>
+            {tasks.filter(t => t.status === status).map(t => (
+              <div key={t.id} className="bg-white p-8 rounded-[2.5rem] shadow-sm mb-6">
+                <h4 className="font-black text-lg italic uppercase">{t.titulo}</h4>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// --- Engineering Kits Manager ---
+
+const KitManager: React.FC<{ 
+  kits: Kit[], 
+  products: Product[], 
+  onSave: (k: Kit) => Promise<void>,
+  onDelete: (id: string) => Promise<void>
+}> = ({ kits, products, onSave, onDelete }) => {
+  const [editing, setEditing] = useState<Kit | null>(null);
+
+  const handleOpenNew = () => {
+    setEditing({
+      id: Math.random().toString(36).substr(2, 9),
+      nomeKit: '',
+      tipoInfra: 'novo',
+      percentualPerda: 10,
+      ativo: true,
+      componentes: []
+    });
+  };
+
+  return (
+    <div className="p-8 max-w-7xl mx-auto animate-fadeIn">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-16 gap-6">
+        <div>
+          <h1 className="text-6xl font-black uppercase italic tracking-tighter leading-none">Padrões <span className="text-red-600">Engenharia</span></h1>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.5em] mt-2">Configuração de Fórmulas de Infraestrutura</p>
+        </div>
+        <button 
+          onClick={handleOpenNew}
+          className="bg-gray-950 text-white px-12 py-5 rounded-[2.5rem] font-black uppercase text-[10px] shadow-2xl hover:bg-red-600 transition-all"
+        >
+          + Novo Padrão
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+        {kits.map(k => (
+          <div key={k.id} className="bg-white p-12 rounded-[4rem] shadow-xl border border-gray-100 group relative">
+             <div className="flex justify-between items-start mb-8">
+               <span className="bg-red-50 text-red-600 text-[8px] font-black uppercase px-2 py-1 rounded tracking-widest">{k.tipoInfra}</span>
+               <div className="flex gap-2">
+                 <button onClick={() => setEditing(JSON.parse(JSON.stringify(k)))} className="text-gray-300 hover:text-gray-950 transition"><i className="fa-solid fa-pen-to-square text-xl"></i></button>
+                 <button onClick={() => confirm(`Excluir ${k.nomeKit}?`) && onDelete(k.id)} className="text-gray-300 hover:text-red-600 transition"><i className="fa-solid fa-trash text-xl"></i></button>
+               </div>
+             </div>
+             <h3 className="font-black uppercase italic text-3xl tracking-tighter mb-4 text-gray-950">{k.nomeKit}</h3>
+             <p className="text-[10px] font-bold text-gray-400 uppercase mb-8 border-b pb-4">Margem de Perda: <b className="text-gray-950">{k.percentualPerda}%</b></p>
+             
+             <div className="space-y-3">
+               <span className="text-[8px] font-black uppercase text-gray-400 tracking-[0.3em] block mb-2">Composição Técnica:</span>
+               {k.componentes.map((c, idx) => (
+                 <div key={idx} className="flex justify-between items-center text-[10px] font-bold text-gray-500 uppercase">
+                    <span className="truncate flex-1 pr-4">{c.produtoNome}</span>
+                    <span className="bg-gray-50 px-2 py-1 rounded text-gray-950">Fator: {c.fatorConversao}</span>
+                 </div>
+               ))}
+             </div>
+          </div>
+        ))}
+      </div>
+
+      {editing && (
+        <div className="fixed inset-0 bg-gray-950/90 backdrop-blur-xl z-[5000] flex items-center justify-center p-4">
+          <div className="bg-white p-12 md:p-16 rounded-[4rem] w-full max-w-2xl animate-fadeIn shadow-2xl max-h-[90vh] overflow-y-auto">
+             <h2 className="text-4xl font-black uppercase italic mb-10 tracking-tighter border-b pb-8">Configurar <span className="text-red-600">Composição</span></h2>
+             
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                <div>
+                  <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Nome do Kit</span>
+                  <input value={editing.nomeKit} onChange={e => setEditing({...editing, nomeKit: e.target.value})} className="w-full bg-gray-50 p-5 rounded-2xl font-bold border-none outline-none mt-2 focus:ring-2 focus:ring-red-600" placeholder="Ex: Infra Tubulação 3/4" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Slug Infra (ID Técnico)</span>
+                  <input value={editing.tipoInfra} onChange={e => setEditing({...editing, tipoInfra: e.target.value})} className="w-full bg-gray-50 p-5 rounded-2xl font-bold border-none outline-none mt-2 focus:ring-2 focus:ring-red-600" placeholder="Ex: alarme_galvanizado" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Margem de Perda (%)</span>
+                  <input type="number" value={editing.percentualPerda} onChange={e => setEditing({...editing, percentualPerda: parseFloat(e.target.value) || 0})} className="w-full bg-gray-50 p-5 rounded-2xl font-bold border-none outline-none mt-2 focus:ring-2 focus:ring-red-600" />
+                </div>
+             </div>
+
+             <div className="border-t pt-10">
+                <div className="flex justify-between items-center mb-8">
+                   <h4 className="text-[11px] font-black uppercase text-gray-950 tracking-[0.4em] flex items-center gap-2">
+                     <i className="fa-solid fa-list-ol text-red-600"></i> Lista de Insumos (Por Metro)
+                   </h4>
+                   <button 
+                     onClick={() => setEditing({...editing, componentes: [...editing.componentes, { produtoNome: products[0]?.nome || '', fatorConversao: 1, unidade: 'UN' }]})}
+                     className="text-[10px] font-black uppercase text-red-600 hover:underline tracking-widest"
+                   >
+                     + Adicionar Componente
+                   </button>
+                </div>
+
+                <div className="space-y-4">
+                   {editing.componentes.map((c, i) => (
+                      <div key={i} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 bg-gray-50 p-6 rounded-[2.5rem] border border-transparent hover:border-gray-200 transition-all">
+                         <select 
+                            value={c.produtoNome} 
+                            onChange={e => { const n = [...editing.componentes]; n[i].produtoNome = e.target.value; setEditing({...editing, componentes: n}); }} 
+                            className="flex-1 bg-transparent border-none outline-none font-black text-[11px] uppercase focus:text-red-600 transition-colors"
+                          >
+                            {products.map(p => <option key={p.id} value={p.nome}>{p.nome}</option>)}
+                         </select>
+                         <div className="flex items-center gap-4 bg-white px-5 py-3 rounded-2xl shadow-sm">
+                           <span className="text-[8px] font-black uppercase text-gray-400">FATOR</span>
+                           <input 
+                              type="number" 
+                              step="0.01" 
+                              value={c.fatorConversao} 
+                              onChange={e => { const n = [...editing.componentes]; n[i].fatorConversao = parseFloat(e.target.value) || 0; setEditing({...editing, componentes: n}); }} 
+                              className="w-16 bg-transparent text-center font-black text-lg italic border-none outline-none focus:ring-0" 
+                           />
+                         </div>
+                         <button onClick={() => { const n = editing.componentes.filter((_, idx) => idx !== i); setEditing({...editing, componentes: n}); }} className="text-gray-200 hover:text-red-600 transition px-2"><i className="fa-solid fa-xmark text-xl"></i></button>
+                      </div>
+                   ))}
+                </div>
+             </div>
+
+             <div className="flex flex-col sm:flex-row gap-6 mt-16">
+               <button onClick={() => setEditing(null)} className="flex-1 py-6 bg-gray-100 rounded-[2.5rem] font-black uppercase text-[10px] text-gray-400 hover:bg-gray-200 transition">Descartar</button>
+               <button onClick={async () => { await onSave(editing!); setEditing(null); }} className="flex-[2] py-6 bg-red-600 text-white rounded-[2.5rem] font-black uppercase text-[10px] shadow-xl hover:bg-red-700 transition">Salvar Padrão Técnico</button>
+             </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const ProductManager: React.FC<{ products: Product[], onSave: (p: Product) => Promise<void>, onDelete: (id: string) => Promise<void> }> = ({ products, onSave, onDelete }) => {
+  const [editing, setEditing] = useState<Partial<Product> | null>(null);
+  return (
+    <div className="p-8 max-w-7xl mx-auto animate-fadeIn">
+      <div className="flex justify-between items-center mb-16">
+        <h1 className="text-6xl font-black uppercase italic tracking-tighter">Catálogo <span className="text-red-600">Insumos</span></h1>
+        <button onClick={() => setEditing({ nome: '', preco: 0 })} className="bg-gray-950 text-white px-10 py-5 rounded-[2rem] font-black uppercase text-[10px] shadow-2xl hover:bg-red-600 transition-all">+ Novo Cadastro</button>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        {products.map(p => (
+          <div key={p.id} className="bg-white p-10 rounded-[4rem] shadow-lg border border-gray-100 flex flex-col items-center group">
+            <h3 className="font-black text-center mb-2 uppercase text-[10px] text-gray-400 leading-tight">{p.nome}</h3>
+            <span className="font-black text-xl italic">{formatCurrency(p.preco)}</span>
+            <div className="flex gap-4 mt-6 opacity-0 group-hover:opacity-100 transition">
+               <button onClick={() => setEditing(p)} className="text-gray-300 hover:text-gray-950 transition-all"><i className="fa-solid fa-pen"></i></button>
+               <button onClick={() => onDelete(p.id)} className="text-gray-300 hover:text-red-600 transition-all"><i className="fa-solid fa-trash"></i></button>
+            </div>
+          </div>
+        ))}
+      </div>
+      {editing && (
+        <div className="fixed inset-0 bg-gray-950/90 backdrop-blur-xl z-[5000] flex items-center justify-center p-4">
+          <div className="bg-white p-16 rounded-[4rem] w-full max-w-md shadow-2xl animate-fadeIn">
+            <h2 className="text-3xl font-black uppercase italic mb-10 tracking-tighter border-b pb-6">Insumo</h2>
+            <div className="space-y-6">
+              <input value={editing.nome} onChange={e => setEditing({...editing, nome: e.target.value})} placeholder="Nome" className="w-full bg-gray-50 p-5 rounded-2xl font-bold border-none outline-none mt-2 focus:ring-2 focus:ring-red-600" />
+              <input type="number" value={editing.preco} onChange={e => setEditing({...editing, preco: parseFloat(e.target.value)})} placeholder="Preço" className="w-full bg-gray-50 p-5 rounded-2xl font-bold border-none outline-none mt-2 focus:ring-2 focus:ring-red-600" />
+            </div>
+            <div className="flex gap-4 mt-12">
+              <button onClick={() => setEditing(null)} className="flex-1 py-5 bg-gray-100 rounded-[2rem] font-black uppercase text-[10px]">Cancelar</button>
+              <button onClick={async () => { await onSave(editing as Product); setEditing(null); }} className="flex-[2] py-5 bg-red-600 text-white rounded-[2rem] font-black uppercase text-[10px]">Salvar</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -730,12 +930,13 @@ const App: React.FC = () => {
 
   const handleSaveProject = async (p: Project) => { await saveProject(p); await loadData(); };
   const handleDeleteProject = async (id: string) => { if (confirm('Excluir projeto permanentemente?')) { await deleteProject(id); await loadData(); } };
-  const handleSaveExpense = async (e: Expense) => { await saveExpense(e); await loadData(); };
-  const handleDeleteExpense = async (id: string) => { await deleteExpense(id); await loadData(); };
-  const handleSaveSupplier = async (s: Supplier) => { await saveSupplier(s); await loadData(); };
+  const handleSaveTask = async (t: Task) => { await saveTask(t); await loadData(); };
+  const handleDeleteTask = async (id: string) => { await deleteTask(id); await loadData(); };
+  const handleSaveKit = async (k: Kit) => { await saveKit(k); await loadData(); };
+  const handleDeleteKit = async (id: string) => { await deleteKit(id); await loadData(); };
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-950 font-sans selection:bg-red-100 selection:text-red-900">
+    <div className="min-h-screen bg-gray-50 text-gray-950 font-sans selection:bg-red-100 selection:text-red-900 overflow-x-hidden">
       <nav className="bg-gray-950 text-white p-8 no-print shadow-2xl relative z-[1000]">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8">
           <Logo />
@@ -753,10 +954,10 @@ const App: React.FC = () => {
         {isLoading && <div className="fixed inset-0 bg-white/80 backdrop-blur-sm z-[9999] flex items-center justify-center"><i className="fa-solid fa-bolt-lightning animate-pulse text-red-600 text-4xl transform -skew-x-12"></i></div>}
         <Routes>
           <Route path="/" element={<Dashboard projects={projects} onDelete={handleDeleteProject} />} />
-          <Route path="/finance" element={<FinanceManager projects={projects} expenses={expenses} suppliers={suppliers} onSaveExpense={handleSaveExpense} onDeleteExpense={handleDeleteExpense} onSaveSupplier={handleSaveSupplier} />} />
-          <Route path="/tasks" element={<TaskManager tasks={tasks} projects={projects} onSave={async (t) => { await saveTask(t); loadData(); }} onDelete={async (id) => { await deleteTask(id); loadData(); }} />} />
+          <Route path="/finance" element={<FinanceManager projects={projects} expenses={expenses} suppliers={suppliers} onSaveExpense={async (e) => { await saveExpense(e); loadData(); }} onDeleteExpense={async (id) => { await deleteExpense(id); loadData(); }} onSaveSupplier={async (s) => { await saveSupplier(s); loadData(); }} />} />
+          <Route path="/tasks" element={<TaskManager tasks={tasks} projects={projects} onSave={handleSaveTask} onDelete={handleDeleteTask} />} />
           <Route path="/products" element={<ProductManager products={products} onSave={async (p) => { await saveProduct(p); loadData(); }} onDelete={async (id) => { await deleteProduct(id); loadData(); }} />} />
-          <Route path="/kits" element={<KitManager kits={kits} products={products} onSave={async (k) => { await saveKit(k); loadData(); }} />} />
+          <Route path="/kits" element={<KitManager kits={kits} products={products} onSave={handleSaveKit} onDelete={handleDeleteKit} />} />
           <Route path="/project/:id" element={<ProjectEditor projects={projects} products={products} kits={kits} customers={customers} onSave={handleSaveProject} onSaveCustomer={async (c) => saveCustomer(c)} />} />
         </Routes>
       </main>
@@ -771,31 +972,22 @@ const Dashboard: React.FC<{ projects: Project[], onDelete: (id: string) => void 
        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-10 mb-16">
           <div>
             <h1 className="text-7xl font-black italic tracking-tighter uppercase leading-none">Visão <span className="text-red-600">Geral</span></h1>
-            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mt-4">Gestão de Carteira e Orçamentação Técnica</p>
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mt-4">Gestão de Carteira e Orçamentação</p>
           </div>
           <Link to="/project/new" className="bg-gray-950 text-white px-12 py-5 rounded-[2.5rem] font-black uppercase text-[10px] shadow-2xl hover:bg-red-600 transition-all">+ Nova Cotação</Link>
        </div>
        
        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
-          {projects.length === 0 && (
-            <div className="col-span-full py-40 text-center bg-white rounded-[5rem] border-4 border-dashed border-gray-100 flex flex-col items-center">
-               <i className="fa-solid fa-folder-open text-6xl text-gray-100 mb-8"></i>
-               <h3 className="font-black uppercase italic text-gray-300 text-3xl">Nenhum projeto encontrado</h3>
-            </div>
-          )}
           {projects.map(p => (
             <div key={p.id} className="bg-white p-12 rounded-[4rem] border border-gray-100 shadow-xl group hover:-translate-y-2 transition-all overflow-hidden relative">
                <div className="flex justify-between items-start mb-8 relative z-10">
                   <span className={`text-[8px] px-3 py-1 rounded-full font-black uppercase tracking-widest ${p.status === ProjectStatus.APPROVED ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>{p.status}</span>
-                  <div className="flex gap-4">
-                    <button onClick={() => onDelete(p.id)} className="text-gray-200 hover:text-red-600 transition"><i className="fa-solid fa-trash"></i></button>
-                  </div>
+                  <button onClick={() => onDelete(p.id)} className="text-gray-200 hover:text-red-600 transition"><i className="fa-solid fa-trash"></i></button>
                </div>
                <h3 className="font-black text-2xl italic tracking-tighter uppercase mb-2 leading-none relative z-10">{p.cliente || 'Consumidor Final'}</h3>
                <p className="text-[10px] font-bold text-gray-400 uppercase mb-8 relative z-10">{p.obra || 'Obra não identificada'}</p>
                
-               <div className="bg-gray-900 p-8 rounded-[2.5rem] shadow-inner relative z-10 overflow-hidden group/card">
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-red-600/10 rounded-full -mr-12 -mt-12 transition-transform group-hover/card:scale-150"></div>
+               <div className="bg-gray-900 p-8 rounded-[2.5rem] relative z-10">
                   <span className="text-[8px] font-black uppercase text-gray-500 block mb-1">Valor Comercial</span>
                   <span className="font-black text-2xl italic text-white">{formatCurrency(p.financeiro.precoVendaFinal)}</span>
                </div>
@@ -807,160 +999,6 @@ const Dashboard: React.FC<{ projects: Project[], onDelete: (id: string) => void 
             </div>
           ))}
        </div>
-    </div>
-  );
-};
-
-const ProductManager: React.FC<{ products: Product[], onSave: (p: Product) => Promise<void>, onDelete: (id: string) => Promise<void> }> = ({ products, onSave, onDelete }) => {
-  const [editing, setEditing] = useState<Partial<Product> | null>(null);
-  return (
-    <div className="p-8 max-w-7xl mx-auto animate-fadeIn">
-      <div className="flex justify-between items-center mb-16">
-        <h1 className="text-6xl font-black uppercase italic tracking-tighter">Catálogo <span className="text-red-600">Insumos</span></h1>
-        <button onClick={() => setEditing({ nome: '', preco: 0 })} className="bg-gray-950 text-white px-10 py-5 rounded-[2rem] font-black uppercase text-[10px] shadow-2xl hover:bg-red-600 transition-all">+ Novo Cadastro</button>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-        {products.map(p => (
-          <div key={p.id} className="bg-white p-10 rounded-[4rem] shadow-lg border border-gray-100 flex flex-col items-center group">
-            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-6 text-gray-200 group-hover:text-red-200 transition-colors"><i className="fa-solid fa-box-open text-3xl"></i></div>
-            <h3 className="font-black text-center mb-2 uppercase text-[10px] text-gray-400 leading-tight">{p.nome}</h3>
-            <span className="font-black text-xl italic">{formatCurrency(p.preco)}</span>
-            <div className="flex gap-4 mt-6 opacity-0 group-hover:opacity-100 transition">
-               <button onClick={() => setEditing(p)} className="text-gray-300 hover:text-gray-950 transition-all"><i className="fa-solid fa-pen"></i></button>
-               <button onClick={() => onDelete(p.id)} className="text-gray-300 hover:text-red-600 transition-all"><i className="fa-solid fa-trash"></i></button>
-            </div>
-          </div>
-        ))}
-      </div>
-      {editing && (
-        <div className="fixed inset-0 bg-gray-950/90 backdrop-blur-xl z-[5000] flex items-center justify-center p-4">
-          <div className="bg-white p-16 rounded-[4rem] w-full max-w-md shadow-2xl animate-fadeIn">
-            <h2 className="text-3xl font-black uppercase italic mb-10 tracking-tighter border-b pb-6">Detalhes do <span className="text-red-600">Insumo</span></h2>
-            <div className="space-y-6">
-              <label className="block"><span className="text-[10px] font-black uppercase text-gray-400">Nome do Material</span>
-                <input value={editing.nome} onChange={e => setEditing({...editing, nome: e.target.value})} className="w-full bg-gray-50 p-5 rounded-2xl font-bold border-none outline-none mt-2 focus:ring-2 focus:ring-red-600" />
-              </label>
-              <label className="block"><span className="text-[10px] font-black uppercase text-gray-400">Preço Unitário</span>
-                <input type="number" value={editing.preco} onChange={e => setEditing({...editing, preco: parseFloat(e.target.value)})} className="w-full bg-gray-50 p-5 rounded-2xl font-bold border-none outline-none mt-2 focus:ring-2 focus:ring-red-600" />
-              </label>
-            </div>
-            <div className="flex gap-4 mt-12">
-              <button onClick={() => setEditing(null)} className="flex-1 py-5 bg-gray-100 rounded-[2rem] font-black uppercase text-[10px] text-gray-400 hover:bg-gray-200 transition">Cancelar</button>
-              <button onClick={async () => { await onSave(editing as Product); setEditing(null); }} className="flex-[2] py-5 bg-red-600 text-white rounded-[2rem] font-black uppercase text-[10px] shadow-lg hover:bg-red-700 transition">Salvar Produto</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-const KitManager: React.FC<{ kits: Kit[], products: Product[], onSave: (k: Kit) => Promise<void> }> = ({ kits, products, onSave }) => {
-  const [editing, setEditing] = useState<Kit | null>(null);
-  return (
-    <div className="p-8 max-w-7xl mx-auto animate-fadeIn">
-      <h1 className="text-6xl font-black uppercase italic mb-16 tracking-tighter">Padrões <span className="text-red-600">Engenharia</span></h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-        {kits.map(k => (
-          <div key={k.id} className="bg-white p-12 rounded-[4rem] shadow-xl border border-gray-100 group">
-            <div className="flex justify-between items-start mb-8">
-               <div>
-                 <p className="text-[10px] font-black text-red-600 uppercase mb-1 tracking-widest">{k.tipoInfra}</p>
-                 <h3 className="font-black uppercase italic text-3xl tracking-tighter">{k.nomeKit}</h3>
-               </div>
-               <button onClick={() => setEditing(k)} className="bg-gray-950 text-white w-12 h-12 rounded-2xl flex items-center justify-center hover:bg-red-600 transition shadow-xl"><i className="fa-solid fa-gears"></i></button>
-            </div>
-            <div className="space-y-3">
-              {k.componentes.map((c, i) => <div key={i} className="flex justify-between text-xs font-bold text-gray-500 uppercase"><span>{c.produtoNome}</span><span>Fator {c.fatorConversao}</span></div>)}
-            </div>
-          </div>
-        ))}
-      </div>
-      {editing && (
-        <div className="fixed inset-0 bg-gray-950/90 backdrop-blur-xl z-[5000] flex items-center justify-center p-4">
-          <div className="bg-white p-16 rounded-[4rem] w-full max-w-2xl animate-fadeIn shadow-2xl">
-             <h2 className="text-4xl font-black uppercase italic mb-10 tracking-tighter border-b pb-8">Configurar <span className="text-red-600">Composição</span></h2>
-             <div className="space-y-8">
-                <input value={editing.nomeKit} onChange={e => setEditing({...editing, nomeKit: e.target.value})} className="w-full bg-gray-50 p-5 rounded-2xl font-bold border-none outline-none focus:ring-2 focus:ring-red-600" />
-                <div className="max-h-[300px] overflow-y-auto space-y-3 pr-2">
-                {editing.componentes.map((c, i) => (
-                  <div key={i} className="flex gap-4 items-center bg-gray-50 p-4 rounded-3xl">
-                    <select value={c.produtoNome} onChange={e => { const n = [...editing.componentes]; n[i].produtoNome = e.target.value; setEditing({...editing, componentes: n}); }} className="flex-1 bg-transparent border-none outline-none font-bold text-xs uppercase focus:text-red-600 transition-colors">
-                      {products.map(p => <option key={p.id} value={p.nome}>{p.nome}</option>)}
-                    </select>
-                    <input type="number" step="0.01" value={c.fatorConversao} onChange={e => { const n = [...editing.componentes]; n[i].fatorConversao = parseFloat(e.target.value); setEditing({...editing, componentes: n}); }} className="w-20 bg-white p-2 rounded-xl text-center font-black focus:ring-2 focus:ring-red-600 transition-all outline-none" />
-                    <button onClick={() => { const n = editing.componentes.filter((_, idx) => idx !== i); setEditing({...editing, componentes: n}); }} className="text-gray-300 hover:text-red-600 transition"><i className="fa-solid fa-xmark"></i></button>
-                  </div>
-                ))}
-                </div>
-                <button onClick={() => setEditing({...editing, componentes: [...editing.componentes, { produtoNome: products[0]?.nome || '', fatorConversao: 1, unidade: 'UN' }]})} className="text-[10px] font-black uppercase text-red-600 hover:underline tracking-widest transition-all">+ Adicionar Insumo ao Kit</button>
-             </div>
-             <div className="flex gap-6 mt-16">
-               <button onClick={() => setEditing(null)} className="flex-1 py-6 bg-gray-100 rounded-[2.5rem] font-black uppercase text-[10px] text-gray-400 hover:bg-gray-200 transition">Descartar</button>
-               <button onClick={async () => { await onSave(editing); setEditing(null); }} className="flex-[2] py-6 bg-red-600 text-white rounded-[2.5rem] font-black uppercase text-[10px] shadow-xl hover:bg-red-700 transition">Salvar Padrão Técnico</button>
-             </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-const TaskManager: React.FC<{ tasks: Task[], projects: Project[], onSave: (t: Task) => Promise<void>, onDelete: (id: string) => Promise<void> }> = ({ tasks, projects, onSave, onDelete }) => {
-  const [editing, setEditing] = useState<Partial<Task> | null>(null);
-  return (
-    <div className="p-8 max-w-7xl mx-auto animate-fadeIn">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-16 gap-6">
-        <div>
-          <h1 className="text-6xl font-black italic tracking-tighter uppercase leading-none">Fluxo <span className="text-red-600">Operacional</span></h1>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.5em] mt-2">Cronograma e Acompanhamento de Obras</p>
-        </div>
-        <button onClick={() => setEditing({ titulo: '', status: TaskStatus.TODO, prioridade: TaskPriority.MEDIUM, dataVencimento: new Date().toISOString().split('T')[0] })} className="bg-gray-950 text-white px-10 py-5 rounded-[2.5rem] font-black uppercase text-[10px] shadow-2xl hover:bg-red-600 transition-all">+ Nova Atividade</button>
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-        {[TaskStatus.TODO, TaskStatus.DOING, TaskStatus.DONE].map(status => (
-          <div key={status} className="bg-gray-100/50 p-8 rounded-[3rem] min-h-[500px]">
-            <h3 className="font-black uppercase italic text-gray-400 text-xs mb-8 tracking-[0.4em] px-4">{status}</h3>
-            <div className="space-y-6">
-              {tasks.filter(t => t.status === status).map(t => (
-                <div key={t.id} className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 group hover:shadow-xl transition-all">
-                  <div className="flex justify-between mb-4"><span className={`text-[8px] font-black uppercase ${t.prioridade === TaskPriority.HIGH ? 'text-red-600' : 'text-gray-400'}`}>{t.prioridade}</span><button onClick={() => onDelete(t.id)} className="text-gray-200 hover:text-red-600 opacity-0 group-hover:opacity-100 transition"><i className="fa-solid fa-trash"></i></button></div>
-                  <h4 className="font-black text-lg italic tracking-tighter uppercase leading-none mb-2">{t.titulo}</h4>
-                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{new Date(t.dataVencimento).toLocaleDateString('pt-BR')}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-      {editing && (
-        <div className="fixed inset-0 bg-gray-950/90 backdrop-blur-xl z-[5000] flex items-center justify-center p-4">
-          <div className="bg-white p-16 rounded-[4rem] w-full max-w-md animate-fadeIn shadow-2xl">
-            <h2 className="text-3xl font-black uppercase italic mb-10 tracking-tighter border-b pb-6">Planejar <span className="text-red-600">Tarefa</span></h2>
-            <div className="space-y-6">
-              <input value={editing.titulo} onChange={e => setEditing({...editing, titulo: e.target.value})} placeholder="Título da Atividade" className="w-full bg-gray-50 p-5 rounded-2xl font-bold border-none outline-none mt-2 focus:ring-2 focus:ring-red-600 transition-all" />
-              <div className="grid grid-cols-2 gap-4">
-                <label>
-                  <span className="text-[10px] font-black uppercase text-gray-400">Prioridade</span>
-                  <select value={editing.prioridade} onChange={e => setEditing({...editing, prioridade: e.target.value as TaskPriority})} className="w-full bg-gray-50 p-4 rounded-xl font-black uppercase text-[10px] border-none outline-none focus:ring-2 focus:ring-red-600 transition-all mt-2">
-                    {Object.values(TaskPriority).map(p => <option key={p} value={p}>{p}</option>)}
-                  </select>
-                </label>
-                <label>
-                  <span className="text-[10px] font-black uppercase text-gray-400">Status</span>
-                  <select value={editing.status} onChange={e => setEditing({...editing, status: e.target.value as TaskStatus})} className="w-full bg-gray-50 p-4 rounded-xl font-black uppercase text-[10px] border-none outline-none focus:ring-2 focus:ring-red-600 transition-all mt-2">
-                    {Object.values(TaskStatus).map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </label>
-              </div>
-            </div>
-            <div className="flex gap-4 mt-12">
-              <button onClick={() => setEditing(null)} className="flex-1 py-5 bg-gray-100 rounded-[2rem] font-black uppercase text-[10px] text-gray-400 hover:bg-gray-200 transition">Cancelar</button>
-              <button onClick={async () => { await onSave(editing as Task); setEditing(null); }} className="flex-[2] py-5 bg-red-600 text-white rounded-[2rem] font-black uppercase text-[10px] shadow-lg hover:bg-red-700 transition">Salvar Tarefa</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
