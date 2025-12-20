@@ -704,7 +704,7 @@ const ProjectEditor: React.FC<{
   );
 };
 
-// --- Operations Manager ---
+// --- Operations Manager (Kanban) ---
 
 const TaskManager: React.FC<{ 
   tasks: Task[], 
@@ -713,21 +713,187 @@ const TaskManager: React.FC<{
   onDelete: (id: string) => Promise<void> 
 }> = ({ tasks, projects, onSave, onDelete }) => {
   const [editing, setEditing] = useState<Partial<Task> | null>(null);
+
+  const handleMove = async (task: Task, direction: 'next' | 'prev') => {
+    let nextStatus = task.status;
+    if (direction === 'next') {
+      if (task.status === TaskStatus.TODO) nextStatus = TaskStatus.DOING;
+      else if (task.status === TaskStatus.DOING) nextStatus = TaskStatus.DONE;
+    } else {
+      if (task.status === TaskStatus.DONE) nextStatus = TaskStatus.DOING;
+      else if (task.status === TaskStatus.DOING) nextStatus = TaskStatus.TODO;
+    }
+    await onSave({ ...task, status: nextStatus });
+  };
+
+  const getPriorityColor = (p: TaskPriority) => {
+    switch (p) {
+      case TaskPriority.HIGH: return 'text-red-600 bg-red-50';
+      case TaskPriority.MEDIUM: return 'text-orange-500 bg-orange-50';
+      default: return 'text-gray-400 bg-gray-50';
+    }
+  };
+
   return (
-    <div className="p-8 max-w-7xl mx-auto animate-fadeIn">
-      <h1 className="text-6xl font-black italic uppercase leading-none mb-16">Operação</h1>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+    <div className="p-8 max-w-7xl mx-auto animate-fadeIn no-print">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-10 mb-16">
+        <div>
+          <h1 className="text-6xl font-black italic uppercase leading-none tracking-tighter">
+            Fluxo <span className="text-red-600">Operacional</span>
+          </h1>
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.5em] mt-4">Gestão de Instalações e Manutenções</p>
+        </div>
+        <button 
+          onClick={() => setEditing({ 
+            titulo: '', 
+            descricao: '', 
+            status: TaskStatus.TODO, 
+            prioridade: TaskPriority.MEDIUM, 
+            dataVencimento: new Date().toISOString().split('T')[0],
+            projetoId: '',
+            checklist: [],
+            tags: []
+          })}
+          className="bg-gray-950 text-white px-10 py-5 rounded-[2.5rem] font-black uppercase text-[10px] tracking-widest shadow-2xl hover:bg-red-600 transition-all"
+        >
+          + Nova Tarefa
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {[TaskStatus.TODO, TaskStatus.DOING, TaskStatus.DONE].map(status => (
-          <div key={status} className="bg-gray-100/50 p-8 rounded-[3rem] min-h-[500px]">
-            <h3 className="font-black uppercase italic text-gray-400 text-xs mb-8 tracking-[0.4em] px-4">{status}</h3>
-            {tasks.filter(t => t.status === status).map(t => (
-              <div key={t.id} className="bg-white p-8 rounded-[2.5rem] shadow-sm mb-6">
-                <h4 className="font-black text-lg italic uppercase">{t.titulo}</h4>
-              </div>
-            ))}
+          <div key={status} className="bg-gray-100/40 p-6 rounded-[3rem] min-h-[600px] border border-gray-200/50 flex flex-col">
+            <div className="flex justify-between items-center mb-10 px-6">
+               <h3 className="font-black uppercase italic text-gray-950 text-xs tracking-[0.4em]">{status}</h3>
+               <span className="bg-gray-950 text-white text-[9px] font-black px-3 py-1 rounded-full">{tasks.filter(t => t.status === status).length}</span>
+            </div>
+            
+            <div className="space-y-6 flex-1">
+              {tasks.filter(t => t.status === status).map(t => (
+                <div key={t.id} className="bg-white p-8 rounded-[2.5rem] shadow-sm hover:shadow-xl transition-all border border-transparent hover:border-red-100 group">
+                   <div className="flex justify-between items-start mb-4">
+                     <span className={`text-[8px] font-black uppercase px-3 py-1 rounded-full ${getPriorityColor(t.prioridade)}`}>{t.prioridade}</span>
+                     <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => setEditing(t)} className="text-gray-300 hover:text-gray-950"><i className="fa-solid fa-pen text-xs"></i></button>
+                        <button onClick={() => confirm('Excluir tarefa?') && onDelete(t.id)} className="text-gray-300 hover:text-red-600"><i className="fa-solid fa-trash text-xs"></i></button>
+                     </div>
+                   </div>
+                   
+                   <h4 className="font-black text-lg italic uppercase tracking-tighter leading-tight text-gray-950 mb-2">{t.titulo}</h4>
+                   {t.projetoId && (
+                     <p className="text-[8px] font-black text-red-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                       <i className="fa-solid fa-location-dot"></i> {projects.find(p => p.id === t.projetoId)?.obra || 'Projeto Vinculado'}
+                     </p>
+                   )}
+                   <p className="text-[10px] text-gray-500 line-clamp-2 mb-6 font-medium">{t.descricao}</p>
+                   
+                   <div className="flex justify-between items-center border-t border-gray-50 pt-6">
+                      <div className="flex flex-col">
+                         <span className="text-[7px] font-black text-gray-300 uppercase">Vencimento</span>
+                         <span className="text-[10px] font-bold text-gray-950">{new Date(t.dataVencimento).toLocaleDateString('pt-BR')}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        {status !== TaskStatus.TODO && (
+                          <button onClick={() => handleMove(t, 'prev')} className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 hover:bg-red-600 hover:text-white transition-all flex items-center justify-center">
+                            <i className="fa-solid fa-arrow-left text-xs"></i>
+                          </button>
+                        )}
+                        {status !== TaskStatus.DONE && (
+                          <button onClick={() => handleMove(t, 'next')} className="w-10 h-10 rounded-full bg-gray-950 text-white hover:bg-red-600 transition-all flex items-center justify-center">
+                            <i className="fa-solid fa-arrow-right text-xs"></i>
+                          </button>
+                        )}
+                      </div>
+                   </div>
+                </div>
+              ))}
+              {tasks.filter(t => t.status === status).length === 0 && (
+                <div className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-gray-200 rounded-[3rem] opacity-30">
+                   <i className="fa-solid fa-clipboard-list text-3xl mb-4"></i>
+                   <span className="text-[10px] font-black uppercase tracking-widest">Sem Tarefas</span>
+                </div>
+              )}
+            </div>
           </div>
         ))}
       </div>
+
+      {editing && (
+        <div className="fixed inset-0 bg-gray-950/90 backdrop-blur-xl z-[5000] flex items-center justify-center p-4">
+          <div className="bg-white p-12 md:p-16 rounded-[4rem] w-full max-w-2xl animate-fadeIn shadow-2xl max-h-[95vh] overflow-y-auto">
+             <h2 className="text-4xl font-black uppercase italic mb-10 tracking-tighter border-b pb-8">Gerenciar <span className="text-red-600">Tarefa</span></h2>
+             
+             <div className="space-y-8">
+                <div>
+                   <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Título da Atividade</span>
+                   <input 
+                      value={editing.titulo} 
+                      onChange={e => setEditing({...editing, titulo: e.target.value})} 
+                      className="w-full bg-gray-50 p-6 rounded-[2rem] font-black uppercase italic text-lg border-none outline-none mt-2 focus:ring-2 focus:ring-red-600" 
+                      placeholder="Ex: Instalação de detectores pavimento 2"
+                   />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                   <div>
+                      <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Prioridade</span>
+                      <select 
+                        value={editing.prioridade} 
+                        onChange={e => setEditing({...editing, prioridade: e.target.value as any})}
+                        className="w-full bg-gray-50 p-5 rounded-[2rem] font-black uppercase text-xs border-none outline-none mt-2 focus:ring-2 focus:ring-red-600"
+                      >
+                         {Object.values(TaskPriority).map(p => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                   </div>
+                   <div>
+                      <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Data de Vencimento</span>
+                      <input 
+                        type="date" 
+                        value={editing.dataVencimento} 
+                        onChange={e => setEditing({...editing, dataVencimento: e.target.value})}
+                        className="w-full bg-gray-50 p-5 rounded-[2rem] font-bold border-none outline-none mt-2 focus:ring-2 focus:ring-red-600"
+                      />
+                   </div>
+                </div>
+
+                <div>
+                   <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Vincular a Projeto / Obra</span>
+                   <select 
+                     value={editing.projetoId} 
+                     onChange={e => {
+                       const proj = projects.find(p => p.id === e.target.value);
+                       setEditing({...editing, projetoId: e.target.value, projetoNome: proj?.obra || ''});
+                     }}
+                     className="w-full bg-gray-50 p-5 rounded-[2rem] font-black uppercase text-xs border-none outline-none mt-2 focus:ring-2 focus:ring-red-600"
+                   >
+                      <option value="">Nenhum Projeto Específico</option>
+                      {projects.map(p => <option key={p.id} value={p.id}>{p.obra || p.cliente}</option>)}
+                   </select>
+                </div>
+
+                <div>
+                   <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Detalhamento Técnico</span>
+                   <textarea 
+                      value={editing.descricao} 
+                      onChange={e => setEditing({...editing, descricao: e.target.value})} 
+                      className="w-full bg-gray-50 p-6 rounded-[2rem] font-medium border-none outline-none mt-2 focus:ring-2 focus:ring-red-600 h-32"
+                      placeholder="Descreva o que precisa ser feito..."
+                   />
+                </div>
+             </div>
+
+             <div className="flex flex-col sm:flex-row gap-6 mt-16">
+                <button onClick={() => setEditing(null)} className="flex-1 py-6 bg-gray-100 rounded-[3rem] font-black uppercase text-[10px] text-gray-400 hover:bg-gray-200 transition">Cancelar</button>
+                <button 
+                   onClick={async () => { await onSave(editing as Task); setEditing(null); }} 
+                   className="flex-[2] py-6 bg-red-600 text-white rounded-[3rem] font-black uppercase text-[10px] shadow-xl hover:bg-red-700 transition"
+                >
+                   Salvar Atividade
+                </button>
+             </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

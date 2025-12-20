@@ -3,6 +3,21 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
 import { Product, Project, Kit, Customer, Task, Expense, Supplier } from '../types';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../constants';
 
+/**
+ * SQL PARA CORREÇÃO DEFINITIVA DE RLS (Executar no SQL Editor do Supabase):
+ * 
+ * -- Ativar RLS
+ * ALTER TABLE public.despesas ENABLE ROW LEVEL SECURITY;
+ * ALTER TABLE public.fornecedores ENABLE ROW LEVEL SECURITY;
+ * 
+ * -- Criar Políticas (Permite que a chave anon faça tudo)
+ * DROP POLICY IF EXISTS "anon_all_despesas" ON public.despesas;
+ * CREATE POLICY "anon_all_despesas" ON public.despesas FOR ALL TO anon USING (true) WITH CHECK (true);
+ * 
+ * DROP POLICY IF EXISTS "anon_all_fornecedores" ON public.fornecedores;
+ * CREATE POLICY "anon_all_fornecedores" ON public.fornecedores FOR ALL TO anon USING (true) WITH CHECK (true);
+ */
+
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const isUUID = (id: any) => {
@@ -79,8 +94,7 @@ export const saveSupplier = async (supplier: Supplier) => {
   return res.data[0];
 };
 
-// --- (RESTO DOS SERVIÇOS ORIGINAIS MANTIDOS) ---
-
+// --- TAREFAS ---
 export const fetchTasks = async (): Promise<Task[]> => {
   try {
     const { data, error } = await supabase.from('tarefas').select('*').order('data_vencimento', { ascending: true });
@@ -108,7 +122,6 @@ export const saveTask = async (task: Task) => {
     descricao: task.descricao,
     status: task.status,
     prioridade: task.prioridade,
-    // Fix: Using correct property name 'dataVencimento' from Task interface
     data_vencimento: task.dataVencimento,
     projeto_id: task.projetoId,
     projeto_nome: task.projetoNome,
@@ -123,6 +136,7 @@ export const saveTask = async (task: Task) => {
 
 export const deleteTask = async (id: string) => { if (isUUID(id)) await supabase.from('tarefas').delete().eq('id', id); };
 
+// --- PRODUTOS ---
 export const fetchProducts = async (): Promise<Product[]> => {
   const { data } = await supabase.from('produtos').select('*').order('nome');
   return (data || []).map(p => ({ id: p.id, nome: p.nome, preco: parseFloat(p.preco) || 0, imagem: p.imagem || '' }));
@@ -136,6 +150,7 @@ export const saveProduct = async (product: Product) => {
 
 export const deleteProduct = async (id: string) => { if (isUUID(id)) await supabase.from('produtos').delete().eq('id', id); };
 
+// --- CLIENTES ---
 export const fetchCustomers = async (): Promise<Customer[]> => {
   const { data } = await supabase.from('clientes').select('*').order('nome');
   return data || [];
@@ -147,9 +162,16 @@ export const saveCustomer = async (customer: Customer) => {
   return (await supabase.from('clientes').insert([cleanData]).select()).data?.[0];
 };
 
+// --- KITS ---
 export const fetchKits = async (): Promise<Kit[]> => {
   const { data } = await supabase.from('kits').select('*');
-  return (data || []).map(k => ({ ...(k.dados_json || {}), id: k.id, nomeKit: k.nome_kit, tipo_infra: k.tipo_infra, ativo: k.ativo }));
+  return (data || []).map(k => ({ 
+    ...(k.dados_json || {}), 
+    id: k.id, 
+    nomeKit: k.nome_kit, 
+    tipoInfra: k.tipo_infra, 
+    ativo: k.ativo 
+  }));
 };
 
 export const saveKit = async (kit: Kit) => {
@@ -160,6 +182,7 @@ export const saveKit = async (kit: Kit) => {
 
 export const deleteKit = async (id: string) => { if (isUUID(id)) await supabase.from('kits').delete().eq('id', id); };
 
+// --- PROJETOS ---
 export const fetchProjects = async (): Promise<Project[]> => {
   const { data } = await supabase.from('projetos').select('*').order('created_at', { ascending: false });
   return (data || []).map(p => ({ 
